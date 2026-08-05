@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% set pagina = 'fechamento' %}
+{% block titulo %}Fechamento{% endblock %}
+{% block conteudo %}
+<h1>Fechamento — {{ nicho }}</h1>
+<p class="legenda">{{ '%02d'|format(mes) }}/{{ ano }} · {{ leads|length }} lead(s) com intenção de reserva</p>
+
+{% include "_filtros.html" %}
+
+<p style="margin-bottom:18px;">
+  <a class="btn" href="/painel/fechamento.csv?nicho={{ nicho }}&amp;ano={{ ano }}&amp;mes={{ mes }}">Baixar CSV</a>
+</p>
+
+{% if leads %}
+<div class="rolagem">
+  <table>
+    <thead>
+      <tr><th>Telefone</th><th>Primeiro contato</th><th>Último contato</th>
+          <th>Msgs</th><th>Sinais</th><th>Link</th><th>Humano</th></tr>
+    </thead>
+    <tbody>
+      {% for lead in leads %}
+      <tr>
+        <td><a href="/painel/telefone/{{ lead.telefone }}?nicho={{ nicho }}">+{{ lead.telefone }}</a></td>
+        <td>{{ lead.primeiro_contato|data_br }}</td>
+        <td>{{ lead.ultimo_contato|data_br }}</td>
+        <td class="num">{{ lead.mensagens }}</td>
+        <td><span class="tag tag-quente">{{ lead.sinais_texto }}</span></td>
+        <td>{{ 'sim' if lead.link_enviado else '—' }}</td>
+        <td>{{ 'sim' if lead.escalado else '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="rolagem"><div class="vazio">Nenhum lead quente neste mês.</div></div>
+{% endif %}
+{% endblock %}

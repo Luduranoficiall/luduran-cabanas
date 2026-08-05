@@ -91,6 +91,17 @@ class Settings:
     # que os próximos nichos (academia, alojamento, sushi...) não exijam
     # migração de dado que já está em produção.
     nicho: str = field(default_factory=lambda: _env("NICHO", "cabanas"))
+    # Nichos que o painel oferece no filtro. Cresce conforme as operações
+    # entram (academia, alojamento, sushi...), sem migrar dado.
+    nichos_painel: tuple[str, ...] = field(
+        default_factory=lambda: tuple(
+            n.strip() for n in _env("NICHOS_PAINEL", "cabanas").split(",") if n.strip()
+        )
+    )
+    # Cookie de sessão só sai por HTTPS. Desligar apenas em teste local.
+    cookie_seguro: bool = field(
+        default_factory=lambda: _env("COOKIE_SEGURO", "1") not in ("0", "false", "no")
+    )
 
     # Número que recebe o aviso quando uma conversa é escalada para humano.
     # Formato internacional, só dígitos (ex.: 5548999998888).

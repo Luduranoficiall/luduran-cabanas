@@ -9,7 +9,10 @@ from fastapi import FastAPI
 
 from .config import settings
 from .gemini_client import GeminiClient
-from .storage import build_storage
+from .painel.auth import ControleTentativas, RepoAuthFirestore, RepoAuthMemoria
+from .painel.repositorio import RepoPainelFirestore, RepoPainelMemoria
+from .painel.rotas import router as painel_router
+from .storage import MemoryStorage, build_storage
 from .webhook import router as webhook_router
 from .whatsapp_client import WhatsAppClient
 
@@ -41,6 +44,17 @@ async def lifespan(app: FastAPI):
     app.state.storage = build_storage(settings)
     app.state.gemini = GeminiClient(settings)
     app.state.whatsapp = WhatsAppClient(settings)
+
+    # Painel. Sem projeto GCP o agente já roda em memória; o painel acompanha,
+    # lendo do mesmo storage, para dar para levantar tudo local.
+    if isinstance(app.state.storage, MemoryStorage):
+        app.state.repo_painel = RepoPainelMemoria(app.state.storage)
+        app.state.repo_auth = RepoAuthMemoria()
+    else:
+        app.state.repo_painel = RepoPainelFirestore(settings)
+        app.state.repo_auth = RepoAuthFirestore(settings)
+    app.state.tentativas_login = ControleTentativas()
+
     logger.info(
         "Agente no ar — %s cabanas (%s), modelo %s",
         settings.total_cabanas,
@@ -55,6 +69,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Agente Cabanas", lifespan=lifespan)
 app.include_router(webhook_router)
+app.include_router(painel_router)
 
 
 @app.get("/health")

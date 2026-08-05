@@ -6,19 +6,22 @@
 
 ## Estado atual
 
-Executados os itens 1, 2 e 3 da ordem de prioridade (Parte 4). Parado aqui
-para revisão antes do painel, conforme combinado.
+Na branch `claude/painel-crm`, aguardando revisão antes do merge.
 
 | Item | Estado |
 | --- | --- |
 | 2.3 Captura de intenção (lead quente) | ✅ feito |
 | 3.3 Campo `nicho` no Firestore | ✅ feito |
 | 2.5 Fallback do Gemini | ✅ já existia; faltava timeout, agora fechado |
-| 2.1 Memória de conversa | 🟡 parcial — histórico já vai ao modelo; falta o corte de 10 msg / 30 min |
+| 1.1 Cabanas na página (opção A, build) | ✅ feito |
+| 3.1 Painel base | ✅ feito |
+| 3.2 Acesso com login e três papéis | ✅ feito |
+| 3.4 Fechamento mensal com CSV | ✅ feito (veio junto, é a mesma tela) |
+| 2.1 Memória de conversa | 🟡 parcial — falta o corte de 10 msg / 30 min |
 | resto | ⬜ não começado |
 
-**Linha de base preservada:** os 45 testes anteriores rodam sem alteração
-contra o código novo. Total agora: **72 testes**.
+**Linha de base preservada:** os 72 testes anteriores rodam sem alteração
+contra o código novo. Total agora: **116 testes**.
 
 ---
 
@@ -26,19 +29,26 @@ contra o código novo. Total agora: **72 testes**.
 
 O cliente aprovou a página como está. Estas são adições, não redesenho.
 
-### 1.1 As 5 cabanas na página
-Hoje a demo mostra uma conversa genérica. Adicionar uma seção com as 5 cabanas
-(foto de capa + link do Airbnb), alimentada pela **mesma configuração do agente**
-(`CABANAS` / `CABANA_URLS`). Se a cabana 3 ainda não tem link, ela não aparece —
-mesma trava que já existe no agente.
+### 1.1 As 5 cabanas na página — ✅ feito (opção A)
+`site/index.template.html` é a fonte; `scripts/gerar_site.py` gera o
+`index.html` lendo a mesma configuração do agente. Sem endpoint público novo, e
+a página não depende do agente estar no ar.
 
-> ⚠️ A página é estática (GitHub Pages) e o agente roda no Cloud Run: ela não
-> consegue ler `CABANAS` em tempo de execução. Ou a página passa a ser gerada
-> por um script no build (lendo a mesma fonte), ou busca de um endpoint novo no
-> agente. Definir qual antes de começar.
+```bash
+python cabanas-agent/scripts/gerar_site.py
+git add index.html && git commit
+```
 
-**Por quê:** a página vira material de venda real, não só demonstração. E o Adriano
-pediu Instagram/stories — dá pra linkar essa página no bio.
+Cabana sem link cadastrado não aparece — mesma trava do agente. Enquanto as
+fotos não chegam, o cartão usa um bloco neutro no lugar da imagem.
+
+A demo aprovada ficou intacta: **105 inserções, 0 remoções**.
+
+> ⚠️ **Achado que precisa da sua decisão:** a conversa de exemplo, aprovada como
+> está, manda `airbnb.com.br/h/1992cabana3` — anúncio que ainda não existe.
+> Quem clicar ali cai em página quebrada. Não mexi por conta própria porque é
+> conteúdo aprovado. Opções: trocar a demo para a cabana 1, ou deixar como está
+> até o anúncio da 3 sair.
 
 ### 1.2 Prova de velocidade com dado real
 Trocar o "~4 segundos" fixo por um número lido do próprio sistema depois que ele
@@ -116,7 +126,7 @@ falha do Gemini. Facilita diagnóstico sem abrir log.
 
 Isso é o que o Adriano pediu explicitamente. Hoje não existe.
 
-### 3.1 O que o painel precisa responder
+### 3.1 O que o painel precisa responder — ✅ feito
 O Adriano fechou assim: **a Camile organiza a planilha do que vier pelo link, e a
 Luduran tem 10%.** O painel serve para dar transparência aos dois lados:
 
@@ -134,7 +144,7 @@ Luduran tem 10%.** O painel serve para dar transparência aos dois lados:
 > campo `clicou_em` já está reservado no schema. Alinhar com o Adriano qual
 > métrica vale para o fechamento **antes** de ligar o sistema.
 
-### 3.2 Acesso
+### 3.2 Acesso — ✅ feito
 - **Lucas:** acesso total, todos os nichos
 - **Adriano:** acesso somente leitura, só cabanas (por enquanto)
 - **Camile:** acesso somente leitura, só cabanas
@@ -148,14 +158,18 @@ da conversa filtra por nicho, então a mesma pessoa falando com cabanas e com a
 academia não mistura contexto. Índices do Firestore já preveem consulta por
 nicho, por período e por lead quente.
 
-### 3.4 Fechamento mensal
+### 3.4 Fechamento mensal — ✅ feito
 Uma tela que, dado um mês, mostra os leads quentes daquele período em formato
 exportável (CSV). É o que a Camile cruza com a planilha dela no fechamento.
 
-### 3.5 Stack sugerida
-Reaproveitar o front do ZENITH (React 18) se a estrutura permitir, apontando para uma
-API nova no mesmo Cloud Run do agente. Se der mais trabalho adaptar do que construir,
-fazer enxuto do zero — o painel do cliente não precisa da complexidade toda do ZENITH.
+### 3.5 Stack sugerida — decidido: enxuto do zero
+Não tenho acesso ao repositório do ZENITH nesta sessão, então não deu para
+avaliar o reaproveitamento. Feito enxuto: FastAPI renderizando HTML no servidor
+(Jinja2), no mesmo Cloud Run do agente. Sem build de front, sem npm, sem
+bundle — o painel tem cinco telas e uma tabela.
+
+Se o ZENITH for reaproveitado depois, as rotas viram JSON sem mexer na camada
+de consulta (`repositorio.py`), que já é separada da apresentação.
 
 ---
 
@@ -168,9 +182,11 @@ fazer enxuto do zero — o painel do cliente não precisa da complexidade toda d
 | 3 | 2.5 Fallback do Gemini | ✅ |
 | 4 | 2.1 Memória de conversa | 🟡 falta corte por tempo |
 | 5 | 2.4 Anti-loop | ⬜ |
-| 6 | 3.1–3.2 Painel base | ⬜ |
-| 7 | 1.1–1.4 Demo | ⬜ |
-| 8 | 2.2, 2.6, 3.4 | ⬜ |
+| 6 | 3.1–3.2 Painel base | ✅ |
+| 7 | 1.1 Demo com as cabanas | ✅ |
+| 7 | 1.2–1.4 Demo (velocidade real, OG, 320px) | ⬜ |
+| 8 | 2.2, 2.6 | ⬜ |
+| 8 | 3.4 Fechamento CSV | ✅ |
 
 ---
 
@@ -185,3 +201,7 @@ fazer enxuto do zero — o painel do cliente não precisa da complexidade toda d
 - [ ] Confirmar se o número +55 54 98448-7198 pode migrar para a Cloud API
 - [ ] **Definir com o Adriano quem paga os custos de infraestrutura**
 - [ ] GitHub Pages: Settings → Pages → branch `main` / root
+- [ ] **Definir prazo de retenção das conversas** — a LGPD pede um prazo, e hoje
+      o dado fica guardado indefinidamente
+- [ ] Decidir sobre o link da cabana 3 na conversa de exemplo (ver 1.1)
+- [ ] Criar os usuários do painel (`scripts/criar_usuario.py`)

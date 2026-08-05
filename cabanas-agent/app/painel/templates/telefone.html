@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block titulo %}Histórico{% endblock %}
+{% block conteudo %}
+<h1>+{{ telefone }}</h1>
+<p class="legenda">Histórico em {{ nicho }} · {{ docs|length }} mensagem(ns)</p>
+
+<p style="margin-bottom:18px;"><a href="/painel/fechamento?nicho={{ nicho }}">&larr; voltar ao fechamento</a></p>
+
+{% if docs %}
+<div class="rolagem">
+  <table>
+    <thead><tr><th>Quando</th><th>Mensagem</th><th>Resposta</th><th>Intenção</th><th>Lead</th></tr></thead>
+    <tbody>
+      {% for d in docs %}
+      <tr>
+        <td>{{ d.criado_em|data_br }}</td>
+        <td style="white-space:normal;max-width:280px;">{{ d.texto }}</td>
+        <td style="white-space:normal;max-width:320px;color:var(--text-lo);">{{ d.resposta or '—' }}</td>
+        <td>{{ d.intencao }}</td>
+        <td>{% if d.lead_quente %}<span class="tag tag-quente">quente</span>{% else %}—{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="rolagem"><div class="vazio">Sem mensagens.</div></div>
+{% endif %}
+{% endblock %}

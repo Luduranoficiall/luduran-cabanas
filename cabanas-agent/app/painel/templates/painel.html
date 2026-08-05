@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% set pagina = 'painel' %}
+{% block titulo %}Visão do mês{% endblock %}
+{% block conteudo %}
+<h1>Visão do mês — {{ nicho }}</h1>
+<p class="legenda">{{ '%02d'|format(mes) }}/{{ ano }}</p>
+
+{% include "_filtros.html" %}
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;">
+  {% macro tile(rotulo, valor, nota='') %}
+  <div style="border:1px solid var(--line);border-radius:12px;padding:16px 18px;">
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-lo);margin-bottom:8px;">{{ rotulo }}</div>
+    <div class="num" style="font-size:26px;font-weight:700;">{{ valor }}</div>
+    {% if nota %}<div style="font-size:11.5px;color:var(--text-lo);margin-top:4px;">{{ nota }}</div>{% endif %}
+  </div>
+  {% endmacro %}
+
+  {{ tile('Pessoas atendidas', metricas.pessoas, metricas.mensagens ~ ' mensagens') }}
+  {{ tile('Leads quentes', metricas.leads_quentes, 'com intenção de reserva') }}
+  {{ tile('Links enviados', metricas.links_enviados) }}
+  {{ tile('Tempo médio', metricas.tempo_medio_texto, 'para responder') }}
+  {{ tile('Escalações', metricas.escalacoes, 'foram para humano') }}
+</div>
+
+<div class="aviso" style="margin-top:22px;">
+  <strong>Links enviados</strong> conta quantas vezes o link do Airbnb foi mandado, não quantas
+  foram clicadas — o clique acontece no site do Airbnb, fora deste sistema.
+</div>
+
+<p style="margin-top:20px;">
+  <a class="btn" href="/painel/fechamento?nicho={{ nicho }}&amp;ano={{ ano }}&amp;mes={{ mes }}">Ver leads do fechamento</a>
+</p>
+{% endblock %}

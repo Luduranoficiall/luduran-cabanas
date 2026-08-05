@@ -1,0 +1,23 @@
+<form class="filtros" method="get">
+  {% if nichos|length > 1 %}
+  <div>
+    <label for="f-nicho">Nicho</label>
+    <select id="f-nicho" name="nicho">
+      {% for n in nichos %}<option value="{{ n }}" {{ 'selected' if n == nicho }}>{{ n }}</option>{% endfor %}
+    </select>
+  </div>
+  {% else %}
+  <input type="hidden" name="nicho" value="{{ nicho }}">
+  {% endif %}
+  <div>
+    <label for="f-mes">Mês</label>
+    <select id="f-mes" name="mes">
+      {% for m in range(1, 13) %}<option value="{{ m }}" {{ 'selected' if m == mes }}>{{ '%02d'|format(m) }}</option>{% endfor %}
+    </select>
+  </div>
+  <div>
+    <label for="f-ano">Ano</label>
+    <input type="number" id="f-ano" name="ano" value="{{ ano }}" min="2025" max="2100" style="width:92px;">
+  </div>
+  <button class="btn btn-sec" type="submit">Aplicar</button>
+</form>

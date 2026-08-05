@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block titulo %}Entrar{% endblock %}
+{% block conteudo %}
+<div style="max-width:340px;margin:60px auto;">
+  <div class="marca" style="font-size:18px;margin-bottom:6px;">LUDURAN <span>IA</span></div>
+  <p class="legenda">Painel de acompanhamento.</p>
+
+  {% if erro %}
+  <div class="aviso" role="alert" style="border-color:rgba(201,128,63,.5);color:#e2b48a;">{{ erro }}</div>
+  {% endif %}
+
+  <form method="post" action="/painel/login" style="display:flex;flex-direction:column;gap:14px;">
+    <div>
+      <label for="email">E-mail</label>
+      <input type="email" id="email" name="email" required autocomplete="username"
+             style="width:100%;background:var(--bg-1);color:var(--text-hi);border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:13px;">
+    </div>
+    <div>
+      <label for="senha">Senha</label>
+      <input type="password" id="senha" name="senha" required autocomplete="current-password"
+             style="width:100%;background:var(--bg-1);color:var(--text-hi);border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:13px;">
+    </div>
+    <button class="btn" type="submit">Entrar</button>
+  </form>
+
+  <p class="legenda" style="margin-top:20px;font-size:11.5px;">
+    Este painel contém telefone de cliente final. O acesso é registrado.
+  </p>
+</div>
+{% endblock %}

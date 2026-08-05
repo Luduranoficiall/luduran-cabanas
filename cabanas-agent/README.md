@@ -59,6 +59,26 @@ conversa filtra por ele. Quando academia e alojamento entrarem, a mesma pessoa
 falando com duas operações não mistura contexto — e não vai ser preciso migrar
 dado que já está em produção.
 
+## Painel
+
+Roda no mesmo serviço, sob `/painel`: visão do mês, fechamento com os leads
+quentes e exportação em CSV. Login de verdade, três níveis de acesso e filtro
+por nicho. Ver [PAINEL.md](PAINEL.md).
+
+## Página de demonstração
+
+A página em `index.html` é **gerada**, não editada à mão:
+
+```bash
+python cabanas-agent/scripts/gerar_site.py
+git add index.html && git commit
+```
+
+A seção das cabanas sai da mesma configuração do agente (`CABANAS` /
+`CABANA_URLS`), então site e atendimento não divergem — e cabana sem link
+cadastrado não aparece, igual ao agente. Editar `site/index.template.html` sem
+rodar o gerador faz o teste `test_index_commitado_esta_atualizado` falhar.
+
 ## Rodar local
 
 ```bash
@@ -76,9 +96,10 @@ uvicorn app.main:app --reload --port 8080
 pytest
 ```
 
-45 testes cobrindo os cinco fluxos da seção 3, os gatilhos de escalação da
-seção 2, deduplicação de webhook, queda do Gemini, validação de assinatura e a
-troca de configuração das cabanas. Nenhum deles usa rede.
+116 testes: os cinco fluxos da seção 3, os gatilhos de escalação da seção 2,
+deduplicação de webhook, queda do Gemini, validação de assinatura, troca de
+configuração das cabanas, geração da página e o painel (autenticação,
+isolamento por nicho, métricas e CSV). Nenhum deles usa rede.
 
 ## Deploy no Cloud Run
 
