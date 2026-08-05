@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import logging
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Request, Response
@@ -17,7 +18,7 @@ from .intents import (
     motivo_escalacao,
     sinais_de_reserva,
 )
-from .prompts import RESPOSTA_ESCALACAO, RESPOSTA_FALLBACK
+from .prompts import RESPOSTA_ANTILOOP, RESPOSTA_ESCALACAO, RESPOSTA_FALLBACK
 from .storage import Storage
 from .whatsapp_client import WhatsAppClient
 
@@ -125,6 +126,11 @@ async def processar_mensagem(
 
     await whatsapp.marcar_como_lida(message_id)
 
+    # Anti-loop antes de qualquer coisa cara: uma enxurrada não pode virar
+    # uma enxurrada de chamadas ao Gemini.
+    if await _enxurrada(storage, telefone, message_id, cfg, whatsapp):
+        return
+
     motivo = motivo_escalacao(texto)
     if motivo:
         resposta = RESPOSTA_ESCALACAO
@@ -134,7 +140,14 @@ async def processar_mensagem(
     else:
         escalado = False
         historico = await storage.historico(
-            telefone, cfg.history_limit, nicho=cfg.nicho
+            telefone,
+            cfg.history_limit,
+            nicho=cfg.nicho,
+            desde=datetime.now(timezone.utc)
+            - timedelta(minutes=cfg.history_janela_min),
+            # Esta mensagem já foi gravada acima; sem excluí-la, o modelo
+            # receberia o mesmo texto duas vezes.
+            excluir_id=message_id,
         )
         try:
             resposta = gemini.responder(texto, historico)
@@ -152,6 +165,58 @@ async def processar_mensagem(
         escalado=escalado,
         link_enviado="airbnb.com.br" in resposta,
     )
+
+
+async def _enxurrada(
+    storage: Storage,
+    telefone: str,
+    message_id: str,
+    cfg: Settings,
+    whatsapp: WhatsAppClient,
+) -> bool:
+    """Trava o atendimento quando o volume passa do razoável.
+
+    Acima de `antiloop_mensagens` na janela, o agente para de responder e a
+    conversa é escalada. Vale contra bot, contra teste malicioso e contra
+    queimar cota do Gemini à toa.
+
+    O aviso sai **uma vez só**: quem está inundando o número não precisa
+    receber a mesma mensagem quinze vezes. As seguintes ficam registradas em
+    silêncio, e o `bloqueado` no documento é o que marca que o aviso já foi.
+    """
+    if cfg.antiloop_mensagens <= 0:
+        return False
+
+    desde = datetime.now(timezone.utc) - timedelta(minutes=cfg.antiloop_janela_min)
+    # Teto de leitura: passar do limite já basta, não interessa por quanto.
+    recentes = await storage.recentes(
+        telefone, nicho=cfg.nicho, desde=desde, teto=cfg.antiloop_mensagens * 2
+    )
+    if len(recentes) <= cfg.antiloop_mensagens:
+        return False
+
+    ja_avisado = any(d.get("bloqueado") for d in recentes)
+    logger.warning(
+        "Anti-loop: %s mandou %s mensagens em %s min — atendimento pausado%s",
+        telefone,
+        len(recentes),
+        cfg.antiloop_janela_min,
+        "" if ja_avisado else ", avisando e escalando",
+    )
+
+    resposta = "" if ja_avisado else RESPOSTA_ANTILOOP
+    if not ja_avisado:
+        await whatsapp.enviar_texto(telefone, resposta)
+        await _avisar_equipe(whatsapp, cfg, telefone, "(volume alto)", "anti_loop")
+
+    await storage.registrar_resposta(
+        message_id,
+        resposta,
+        escalado=True,
+        link_enviado=False,
+        bloqueado=True,
+    )
+    return True
 
 
 def _primeiro_link(cfg: Settings) -> str:

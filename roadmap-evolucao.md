@@ -19,11 +19,11 @@ telas de escalações e auditoria.
 | 3.2 Acesso com login e três papéis | ✅ (virou admin / operador / leitor) |
 | 3.3 Campo `nicho` no Firestore | ✅ |
 | 3.4 Fechamento mensal com conferência e CSV | ✅ |
-| 2.1 Memória de conversa | 🟡 falta o corte de 10 msg / 30 min |
-| 2.4 Anti-loop | ⬜ |
+| 2.1 Memória de conversa | ✅ |
+| 2.4 Anti-loop | ✅ |
 | 1.2–1.4, 2.2, 2.6 | ⬜ |
 
-**Total: 173 testes.**
+**Total: 191 testes.**
 
 ### 🔴 Bloqueia o lançamento
 
@@ -80,13 +80,14 @@ antigo isso estoura. Ajustar para `min(340px, 92vw)`.
 
 ## Parte 2 — Agente de IA
 
-### 2.1 Memória de conversa (contexto) — 🟡 parcial
-As últimas `HISTORY_LIMIT` mensagens daquele telefone já são buscadas no
-Firestore e passadas ao Gemini, filtradas por nicho.
+### 2.1 Memória de conversa (contexto) — ✅ feito
+`HISTORY_LIMIT=10` trocas **ou** `HISTORY_JANELA_MIN=30` minutos, o que vier
+primeiro, filtrado por nicho e por telefone.
 
-**Falta:** o corte por tempo. Hoje o limite é só por quantidade — uma conversa
-de três semanas atrás ainda entra como contexto. Implementar "10 mensagens ou
-30 minutos, o que vier primeiro".
+Um bug apareceu na implementação: a mensagem sendo respondida é gravada
+*antes* da consulta do histórico, então o modelo recebia o mesmo texto duas
+vezes — uma no contexto e outra como pergunta atual. Corrigido com
+`excluir_id`, e travado por teste.
 
 ### 2.2 Horário de atendimento inteligente
 O agente responde 24h (esse é o valor vendido). Mas fora do horário comercial, avisar
@@ -116,9 +117,16 @@ Escalação e lead quente são independentes — quem pede desconto para 6 pesso
 Guardamos os sinais, não só o booleano, para a Camile conseguir ver *por que*
 cada lead foi marcado.
 
-### 2.4 Anti-loop
-Se a mesma pessoa mandar mais de 15 mensagens em 10 minutos, parar de responder e
-escalar. Protege contra bot, teste malicioso, e contra queimar cota do Gemini à toa.
+### 2.4 Anti-loop — ✅ feito
+Acima de `ANTILOOP_MENSAGENS=15` do mesmo número em `ANTILOOP_JANELA_MIN=10`
+minutos, o agente para de responder, escala e avisa a equipe.
+
+Roda **antes** de tudo que custa: a 16ª mensagem não chega ao Gemini. Numa
+enxurrada de 20, foram 15 chamadas em vez de 20.
+
+O aviso ao cliente sai **uma vez só** — quem está inundando o número não
+precisa receber a mesma resposta quinze vezes. O `bloqueado` no documento é o
+que marca que o aviso já foi. `ANTILOOP_MENSAGENS=0` desliga a trava.
 
 ### 2.5 Fallback quando o Gemini cai — ✅ feito
 Já existia desde a primeira entrega: falha do modelo cai numa resposta fixa com

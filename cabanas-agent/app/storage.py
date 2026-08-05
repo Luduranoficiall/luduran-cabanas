@@ -42,12 +42,27 @@ class Storage(Protocol):
     ) -> bool: ...
 
     async def registrar_resposta(
-        self, message_id: str, resposta: str, escalado: bool, link_enviado: bool
+        self,
+        message_id: str,
+        resposta: str,
+        escalado: bool,
+        link_enviado: bool,
+        bloqueado: bool = False,
     ) -> None: ...
 
     async def historico(
-        self, telefone: str, limite: int, *, nicho: str = "cabanas"
+        self,
+        telefone: str,
+        limite: int,
+        *,
+        nicho: str = "cabanas",
+        desde: datetime | None = None,
+        excluir_id: str | None = None,
     ) -> list[dict[str, str]]: ...
+
+    async def recentes(
+        self, telefone: str, *, nicho: str, desde: datetime, teto: int
+    ) -> list[dict[str, Any]]: ...
 
 
 def _agora() -> datetime:
@@ -94,7 +109,12 @@ class MemoryStorage:
             return True
 
     async def registrar_resposta(
-        self, message_id: str, resposta: str, escalado: bool, link_enviado: bool
+        self,
+        message_id: str,
+        resposta: str,
+        escalado: bool,
+        link_enviado: bool,
+        bloqueado: bool = False,
     ) -> None:
         async with self._lock:
             doc = self._docs.get(message_id)
@@ -103,21 +123,45 @@ class MemoryStorage:
                     resposta=resposta,
                     escalado=escalado,
                     link_enviado=link_enviado,
+                    bloqueado=bloqueado,
                     respondido_em=_agora(),
                 )
 
     async def historico(
-        self, telefone: str, limite: int, *, nicho: str = "cabanas"
+        self,
+        telefone: str,
+        limite: int,
+        *,
+        nicho: str = "cabanas",
+        desde: datetime | None = None,
+        excluir_id: str | None = None,
     ) -> list[dict[str, str]]:
         async with self._lock:
             docs = [
                 d
-                for d in self._docs.values()
-                if d["telefone"] == telefone and d.get("nicho", "cabanas") == nicho
+                for mid, d in self._docs.items()
+                if d["telefone"] == telefone
+                and d.get("nicho", "cabanas") == nicho
+                and mid != excluir_id
+                and (desde is None or d["criado_em"] >= desde)
             ]
         docs.sort(key=lambda d: d["criado_em"])
-        recentes = docs[-limite:] if limite else docs
-        return _para_turnos(recentes)
+        ultimas = docs[-limite:] if limite else docs
+        return _para_turnos(ultimas)
+
+    async def recentes(
+        self, telefone: str, *, nicho: str, desde: datetime, teto: int
+    ) -> list[dict[str, Any]]:
+        async with self._lock:
+            docs = [
+                d
+                for d in self._docs.values()
+                if d["telefone"] == telefone
+                and d.get("nicho", "cabanas") == nicho
+                and d["criado_em"] >= desde
+            ]
+        docs.sort(key=lambda d: d["criado_em"])
+        return docs[-teto:]
 
 
 class FirestoreStorage:
@@ -171,7 +215,12 @@ class FirestoreStorage:
             return False
 
     async def registrar_resposta(
-        self, message_id: str, resposta: str, escalado: bool, link_enviado: bool
+        self,
+        message_id: str,
+        resposta: str,
+        escalado: bool,
+        link_enviado: bool,
+        bloqueado: bool = False,
     ) -> None:
         from google.cloud import firestore
 
@@ -180,18 +229,30 @@ class FirestoreStorage:
                 "resposta": resposta,
                 "escalado": escalado,
                 "link_enviado": link_enviado,
+                "bloqueado": bloqueado,
                 "respondido_em": firestore.SERVER_TIMESTAMP,
             }
         )
 
     async def historico(
-        self, telefone: str, limite: int, *, nicho: str = "cabanas"
+        self,
+        telefone: str,
+        limite: int,
+        *,
+        nicho: str = "cabanas",
+        desde: datetime | None = None,
+        excluir_id: str | None = None,
     ) -> list[dict[str, str]]:
         """Últimas trocas com esse telefone neste nicho, mais antigas primeiro.
 
         O filtro por nicho evita que, quando a academia e o alojamento
         entrarem, uma pessoa que fala com as duas operações veja o contexto de
         uma vazando na outra.
+
+        `desde` corta conversa velha: passado o tempo, aquilo deixa de ser
+        contexto e vira ruído. `excluir_id` tira a mensagem que está sendo
+        respondida agora — ela já foi gravada antes desta consulta, e sem isso
+        o modelo receberia o mesmo texto duas vezes.
 
         Precisa do índice composto (nicho ASC, telefone ASC, criado_em DESC) —
         ver firestore.indexes.json.
@@ -202,12 +263,43 @@ class FirestoreStorage:
             self._col()
             .where(filter=firestore.FieldFilter("nicho", "==", nicho))
             .where(filter=firestore.FieldFilter("telefone", "==", telefone))
-            .order_by("criado_em", direction=firestore.Query.DESCENDING)
-            .limit(limite)
         )
-        docs = [doc.to_dict() async for doc in consulta.stream()]
+        if desde is not None:
+            consulta = consulta.where(
+                filter=firestore.FieldFilter("criado_em", ">=", desde)
+            )
+        consulta = consulta.order_by(
+            "criado_em", direction=firestore.Query.DESCENDING
+        ).limit(limite + 1 if excluir_id else limite)
+
+        docs = [
+            (doc.id, doc.to_dict()) async for doc in consulta.stream()
+        ]
+        docs = [d for mid, d in docs if mid != excluir_id][:limite]
         docs.reverse()  # a consulta vem do mais novo para o mais antigo
         return _para_turnos(docs)
+
+    async def recentes(
+        self, telefone: str, *, nicho: str, desde: datetime, teto: int
+    ) -> list[dict[str, Any]]:
+        """Mensagens da janela do anti-loop.
+
+        `teto` limita a leitura: numa enxurrada não faz sentido puxar tudo, só
+        o bastante para saber que passou do limite.
+        """
+        from google.cloud import firestore
+
+        consulta = (
+            self._col()
+            .where(filter=firestore.FieldFilter("nicho", "==", nicho))
+            .where(filter=firestore.FieldFilter("telefone", "==", telefone))
+            .where(filter=firestore.FieldFilter("criado_em", ">=", desde))
+            .order_by("criado_em", direction=firestore.Query.DESCENDING)
+            .limit(teto)
+        )
+        docs = [doc.to_dict() async for doc in consulta.stream()]
+        docs.reverse()
+        return docs
 
 
 def _para_turnos(docs: list[dict[str, Any]]) -> list[dict[str, str]]:

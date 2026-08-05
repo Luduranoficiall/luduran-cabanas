@@ -75,3 +75,11 @@ RESPOSTA_FALLBACK = (
     "Oi! A diária das cabanas é {diaria}.\n\n"
     "Você consegue ver as fotos, as datas livres e reservar direto por aqui: {link}"
 )
+
+# Enviada uma única vez quando o anti-loop trava o atendimento. Sem acusar
+# ninguém: quem manda muita mensagem quase sempre é cliente ansioso, não bot.
+RESPOSTA_ANTILOOP = (
+    "Recebi suas mensagens! Para não te responder de forma automática e "
+    "atrapalhar, vou passar essa conversa para nossa equipe.\n\n"
+    "Alguém retorna para você por aqui. 😊"
+)

@@ -25,14 +25,18 @@ WhatsApp (Meta Cloud API)
  Gemini API   Firestore
 ```
 
-Cada mensagem passa por três etapas:
+Cada mensagem passa por quatro etapas:
 
+0. **Anti-loop** (`app/webhook.py`) — acima de 15 mensagens do mesmo número em
+   10 minutos, o agente para de responder e escala. Avisa uma vez só e não
+   gasta mais chamada de modelo.
 1. **Trava de escalação** (`app/intents.py`) — se a mensagem pede desconto, é
    reclamação, fala de evento/grupo ou pede atendimento humano, o Gemini nem é
    chamado. A resposta é fixa e a Camile recebe um aviso. É o que garante que
    "faz por 100?" nunca vira negociação.
 2. **Gemini** (`app/gemini_client.py`) — responde o resto, com o system prompt
-   da seção 2 da spec e as últimas mensagens da conversa como contexto.
+   da seção 2 da spec e as últimas trocas como contexto: 10 trocas ou 30
+   minutos, o que vier primeiro. Conversa de ontem não é contexto, é ruído.
 3. **Firestore** (`app/storage.py`) — registra nicho, telefone, texto, resposta,
    intenção, se é lead quente e timestamp. É a base do painel de fechamento
    mensal.
@@ -98,11 +102,12 @@ uvicorn app.main:app --reload --port 8080
 pytest
 ```
 
-173 testes: os cinco fluxos da seção 3, os gatilhos de escalação da seção 2,
+191 testes: os cinco fluxos da seção 3, os gatilhos de escalação da seção 2,
 deduplicação de webhook, queda do Gemini, validação de assinatura, troca de
 configuração das cabanas, geração da página e o painel (autenticação,
 isolamento por nicho, métricas, conferência do fechamento, cálculo da comissão,
-CSV, escalações e auditoria). Nenhum deles usa rede.
+CSV, escalações e auditoria), além da memória com corte por tempo e do
+anti-loop. Nenhum deles usa rede.
 
 ## Deploy no Cloud Run
 

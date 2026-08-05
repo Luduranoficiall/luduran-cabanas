@@ -123,8 +123,27 @@ class Settings:
     # Cabanas listadas em CABANAS que ficaram de fora por não ter link.
     cabanas_sem_link: list[str] = field(default_factory=_cabanas_sem_link)
 
-    # Quantas mensagens anteriores entram no contexto do modelo.
-    history_limit: int = field(default_factory=lambda: int(_env("HISTORY_LIMIT", "6")))
+    # Contexto que vai para o modelo: as N últimas TROCAS, mas só as dos
+    # últimos M minutos — o que vier primeiro. Conversa de ontem não é
+    # contexto, é ruído: a pessoa que voltou hoje para perguntar outra coisa
+    # não quer resposta amarrada no assunto da semana passada.
+    #
+    # "Troca" é uma mensagem recebida com a resposta dela, então o limite de 10
+    # vira até 20 turnos no prompt.
+    history_limit: int = field(default_factory=lambda: int(_env("HISTORY_LIMIT", "10")))
+    history_janela_min: int = field(
+        default_factory=lambda: int(_env("HISTORY_JANELA_MIN", "30"))
+    )
+
+    # Anti-loop: acima de N mensagens em M minutos, o agente para de responder
+    # e escala. Protege contra bot, teste malicioso e cota do Gemini queimada
+    # à toa.
+    antiloop_mensagens: int = field(
+        default_factory=lambda: int(_env("ANTILOOP_MENSAGENS", "15"))
+    )
+    antiloop_janela_min: int = field(
+        default_factory=lambda: int(_env("ANTILOOP_JANELA_MIN", "10"))
+    )
 
     @property
     def total_cabanas(self) -> int:
