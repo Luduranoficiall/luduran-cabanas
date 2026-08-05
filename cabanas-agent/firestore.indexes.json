@@ -4,7 +4,25 @@
       "collectionGroup": "cabanas_leads",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "nicho", "order": "ASCENDING" },
         { "fieldPath": "telefone", "order": "ASCENDING" },
+        { "fieldPath": "criado_em", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cabanas_leads",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "nicho", "order": "ASCENDING" },
+        { "fieldPath": "criado_em", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cabanas_leads",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "nicho", "order": "ASCENDING" },
+        { "fieldPath": "lead_quente", "order": "ASCENDING" },
         { "fieldPath": "criado_em", "order": "DESCENDING" }
       ]
     }

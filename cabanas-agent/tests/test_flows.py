@@ -16,8 +16,13 @@ from app.intents import (
     INTENCAO_ESCALACAO,
     INTENCAO_PRECO,
     INTENCAO_RESERVA,
+    SINAL_DATA,
+    SINAL_PESSOAS,
+    SINAL_RESERVA,
     detectar_intencao,
+    eh_lead_quente,
     motivo_escalacao,
+    sinais_de_reserva,
 )
 from app.prompts import RESPOSTA_ESCALACAO, build_system_prompt
 from app.storage import MemoryStorage
@@ -295,6 +300,140 @@ def test_system_prompt_tem_as_regras_criticas():
     assert "NÃO confirma reservas" in prompt
     assert "NÃO tem acesso ao calendário em tempo real" in prompt
     assert "NÃO negocia preço" in prompt
+
+
+# --- 2.3 Captura de intenção de reserva (lead quente) --------------------
+
+
+@pytest.mark.parametrize(
+    "texto,sinal",
+    [
+        ("Tem vaga pro dia 12?", SINAL_DATA),
+        ("Está livre sexta?", SINAL_DATA),
+        ("Tem cabana para 12/03?", SINAL_DATA),
+        ("Queria ir em dezembro", SINAL_DATA),
+        ("Vamos no feriadão", SINAL_DATA),
+        ("Somos 4", SINAL_PESSOAS),
+        ("É para 6 pessoas", SINAL_PESSOAS),
+        ("Vou com a família", SINAL_PESSOAS),
+        ("Somos um casal", SINAL_PESSOAS),
+        ("Quero reservar", SINAL_RESERVA),
+        ("Como faço para reservar?", SINAL_RESERVA),
+        ("Vou querer para o mês que vem", SINAL_RESERVA),
+    ],
+)
+def test_sinais_de_lead_quente(texto, sinal):
+    assert sinal in sinais_de_reserva(texto)
+    assert eh_lead_quente(texto)
+
+
+@pytest.mark.parametrize(
+    "texto",
+    [
+        "Quanto custa a diária?",
+        "Quantas cabanas vocês têm?",
+        "As cabanas têm wi-fi?",
+        "Qual a política de reserva?",
+        "Onde fica?",
+        "Oi, bom dia",
+    ],
+)
+def test_curiosidade_nao_vira_lead_quente(texto):
+    """A métrica sustenta a conversa dos 10%.
+
+    Marcar lead quente demais infla justamente o número que justifica a nossa
+    comissão. Na dúvida, não marca.
+    """
+    assert sinais_de_reserva(texto) == []
+    assert not eh_lead_quente(texto)
+
+
+def test_politica_de_reserva_nao_e_intencao_de_reserva():
+    # "reserva" solto é dúvida; o que conta é o verbo com marcador de intenção.
+    assert SINAL_RESERVA not in sinais_de_reserva("Qual a política de reserva?")
+    assert SINAL_RESERVA in sinais_de_reserva("Quero reservar")
+
+
+@pytest.mark.asyncio
+async def test_lead_quente_vai_para_o_firestore(ambiente):
+    await processar_mensagem(msg("Somos 4 pessoas, tem vaga dia 12?"), **ambiente)
+
+    doc = ambiente["storage"]._docs["wamid.1"]
+    assert doc["lead_quente"] is True
+    assert sorted(doc["sinais_lead"]) == [SINAL_DATA, SINAL_PESSOAS]
+
+
+@pytest.mark.asyncio
+async def test_conversa_fria_fica_marcada_como_fria(ambiente):
+    await processar_mensagem(msg("Quanto custa?"), **ambiente)
+
+    doc = ambiente["storage"]._docs["wamid.1"]
+    assert doc["lead_quente"] is False
+    assert doc["sinais_lead"] == []
+
+
+@pytest.mark.asyncio
+async def test_escalacao_nao_apaga_o_lead_quente(ambiente):
+    """Pedir desconto para 4 pessoas no dia 12 é escalação E lead quente.
+
+    O painel do Adriano perderia esse lead se as duas coisas fossem exclusivas.
+    """
+    await processar_mensagem(msg("Faz desconto para 4 pessoas no dia 12?"), **ambiente)
+
+    doc = ambiente["storage"]._docs["wamid.1"]
+    assert doc["escalado"] is True
+    assert doc["lead_quente"] is True
+
+
+# --- 3.3 Multi-nicho ------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_nicho_e_gravado_em_toda_mensagem(ambiente):
+    await processar_mensagem(msg("Quanto custa?"), **ambiente)
+    assert ambiente["storage"]._docs["wamid.1"]["nicho"] == "cabanas"
+
+
+@pytest.mark.asyncio
+async def test_nicho_vem_da_configuracao(monkeypatch, ambiente):
+    monkeypatch.setenv("NICHO", "academia")
+    ambiente["cfg"] = Settings(cabanas=ambiente["cfg"].cabanas)
+
+    await processar_mensagem(msg("Quanto custa?"), **ambiente)
+    assert ambiente["storage"]._docs["wamid.1"]["nicho"] == "academia"
+
+
+@pytest.mark.asyncio
+async def test_historico_nao_vaza_entre_nichos(ambiente):
+    """Mesma pessoa falando com duas operações não pode misturar contexto."""
+    storage = ambiente["storage"]
+    await storage.reservar_mensagem(
+        "wamid.academia", TELEFONE, "Quanto custa a mensalidade?", "preco",
+        nicho="academia",
+    )
+    await storage.registrar_resposta(
+        "wamid.academia", "R$99", escalado=False, link_enviado=False
+    )
+
+    historico = await storage.historico(TELEFONE, 10, nicho="cabanas")
+    assert historico == []
+
+    historico_academia = await storage.historico(TELEFONE, 10, nicho="academia")
+    assert len(historico_academia) == 2
+
+
+def test_nicho_tem_default_para_nao_quebrar_dado_existente():
+    cfg = Settings()
+    assert cfg.nicho == "cabanas"
+
+
+# --- 2.5 Fallback do Gemini ----------------------------------------------
+
+
+def test_timeout_do_gemini_tem_teto_configurado():
+    """Sem teto, uma chamada travada nunca devolve nem o fallback."""
+    cfg = Settings()
+    assert 0 < cfg.gemini_timeout_s <= 20
 
 
 # --- Robustez do webhook -------------------------------------------------

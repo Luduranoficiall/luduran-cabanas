@@ -68,6 +68,9 @@ def _cabanas_sem_link() -> list[str]:
 class Settings:
     gemini_api_key: str = field(default_factory=lambda: _env("GEMINI_API_KEY"))
     gemini_model: str = field(default_factory=lambda: _env("GEMINI_MODEL", "gemini-2.5-flash"))
+    # Sem teto, uma chamada travada segura a resposta para sempre. 12s deixa
+    # margem para o modelo e ainda cabe folgado na janela da Meta.
+    gemini_timeout_s: float = field(default_factory=lambda: float(_env("GEMINI_TIMEOUT_S", "12")))
 
     whatsapp_token: str = field(default_factory=lambda: _env("WHATSAPP_TOKEN"))
     # ATENÇÃO: não é o telefone. É o ID numérico que a Meta dá ao número
@@ -84,6 +87,10 @@ class Settings:
 
     gcp_project_id: str = field(default_factory=lambda: _env("GCP_PROJECT_ID", "serious-trainer-465716-j9"))
     firestore_collection: str = field(default_factory=lambda: _env("FIRESTORE_COLLECTION", "cabanas_leads"))
+    # Qual operação gerou o registro. Já entra agora, com o schema vazio, para
+    # que os próximos nichos (academia, alojamento, sushi...) não exijam
+    # migração de dado que já está em produção.
+    nicho: str = field(default_factory=lambda: _env("NICHO", "cabanas"))
 
     # Número que recebe o aviso quando uma conversa é escalada para humano.
     # Formato internacional, só dígitos (ex.: 5548999998888).

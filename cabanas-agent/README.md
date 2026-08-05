@@ -33,8 +33,31 @@ Cada mensagem passa por três etapas:
    "faz por 100?" nunca vira negociação.
 2. **Gemini** (`app/gemini_client.py`) — responde o resto, com o system prompt
    da seção 2 da spec e as últimas mensagens da conversa como contexto.
-3. **Firestore** (`app/storage.py`) — registra telefone, texto, resposta,
-   intenção e timestamp. É a base do painel de fechamento mensal.
+3. **Firestore** (`app/storage.py`) — registra nicho, telefone, texto, resposta,
+   intenção, se é lead quente e timestamp. É a base do painel de fechamento
+   mensal.
+
+### Lead quente
+
+Marca quem demonstrou intenção real de reserva — a métrica que separa "20
+pessoas conversaram" de "7 queriam mesmo reservar". Três sinais:
+
+| Sinal | Dispara com |
+| --- | --- |
+| `data_especifica` | "dia 12", "12/03", dia da semana, mês, feriadão |
+| `numero_pessoas` | "4 pessoas", "somos 6", casal, família, criança |
+| `pediu_reserva` | "quero reservar", "como faço para reservar" |
+
+A detecção é conservadora de propósito: essa métrica sustenta a conversa dos
+10%, e um número inflado cai por terra quando o cliente conferir caso a caso.
+"Qual a política de reserva?" não conta; "quero reservar" conta.
+
+### Multi-nicho
+
+Todo documento nasce com `nicho` (`NICHO`, padrão `cabanas`), e o histórico da
+conversa filtra por ele. Quando academia e alojamento entrarem, a mesma pessoa
+falando com duas operações não mistura contexto — e não vai ser preciso migrar
+dado que já está em produção.
 
 ## Rodar local
 

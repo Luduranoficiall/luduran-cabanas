@@ -30,14 +30,24 @@ logger = logging.getLogger(__name__)
 
 class Storage(Protocol):
     async def reservar_mensagem(
-        self, message_id: str, telefone: str, texto: str, intencao: str
+        self,
+        message_id: str,
+        telefone: str,
+        texto: str,
+        intencao: str,
+        *,
+        nicho: str = "cabanas",
+        lead_quente: bool = False,
+        sinais_lead: list[str] | None = None,
     ) -> bool: ...
 
     async def registrar_resposta(
         self, message_id: str, resposta: str, escalado: bool, link_enviado: bool
     ) -> None: ...
 
-    async def historico(self, telefone: str, limite: int) -> list[dict[str, str]]: ...
+    async def historico(
+        self, telefone: str, limite: int, *, nicho: str = "cabanas"
+    ) -> list[dict[str, str]]: ...
 
 
 def _agora() -> datetime:
@@ -55,15 +65,26 @@ class MemoryStorage:
         self._lock = asyncio.Lock()
 
     async def reservar_mensagem(
-        self, message_id: str, telefone: str, texto: str, intencao: str
+        self,
+        message_id: str,
+        telefone: str,
+        texto: str,
+        intencao: str,
+        *,
+        nicho: str = "cabanas",
+        lead_quente: bool = False,
+        sinais_lead: list[str] | None = None,
     ) -> bool:
         async with self._lock:
             if message_id in self._docs:
                 return False
             self._docs[message_id] = {
+                "nicho": nicho,
                 "telefone": telefone,
                 "texto": texto,
                 "intencao": intencao,
+                "lead_quente": lead_quente,
+                "sinais_lead": sinais_lead or [],
                 "resposta": None,
                 "escalado": False,
                 "link_enviado": False,
@@ -85,9 +106,15 @@ class MemoryStorage:
                     respondido_em=_agora(),
                 )
 
-    async def historico(self, telefone: str, limite: int) -> list[dict[str, str]]:
+    async def historico(
+        self, telefone: str, limite: int, *, nicho: str = "cabanas"
+    ) -> list[dict[str, str]]:
         async with self._lock:
-            docs = [d for d in self._docs.values() if d["telefone"] == telefone]
+            docs = [
+                d
+                for d in self._docs.values()
+                if d["telefone"] == telefone and d.get("nicho", "cabanas") == nicho
+            ]
         docs.sort(key=lambda d: d["criado_em"])
         recentes = docs[-limite:] if limite else docs
         return _para_turnos(recentes)
@@ -109,7 +136,15 @@ class FirestoreStorage:
         return self._get_client().collection(self.cfg.firestore_collection)
 
     async def reservar_mensagem(
-        self, message_id: str, telefone: str, texto: str, intencao: str
+        self,
+        message_id: str,
+        telefone: str,
+        texto: str,
+        intencao: str,
+        *,
+        nicho: str = "cabanas",
+        lead_quente: bool = False,
+        sinais_lead: list[str] | None = None,
     ) -> bool:
         from google.api_core import exceptions as gexc
         from google.cloud import firestore
@@ -117,9 +152,12 @@ class FirestoreStorage:
         try:
             await self._col().document(message_id).create(
                 {
+                    "nicho": nicho,
                     "telefone": telefone,
                     "texto": texto,
                     "intencao": intencao,
+                    "lead_quente": lead_quente,
+                    "sinais_lead": sinais_lead or [],
                     "resposta": None,
                     "escalado": False,
                     "link_enviado": False,
@@ -146,16 +184,23 @@ class FirestoreStorage:
             }
         )
 
-    async def historico(self, telefone: str, limite: int) -> list[dict[str, str]]:
-        """Últimas trocas com esse telefone, mais antigas primeiro.
+    async def historico(
+        self, telefone: str, limite: int, *, nicho: str = "cabanas"
+    ) -> list[dict[str, str]]:
+        """Últimas trocas com esse telefone neste nicho, mais antigas primeiro.
 
-        Precisa do índice composto (telefone ASC, criado_em DESC) — ver
-        firestore.indexes.json.
+        O filtro por nicho evita que, quando a academia e o alojamento
+        entrarem, uma pessoa que fala com as duas operações veja o contexto de
+        uma vazando na outra.
+
+        Precisa do índice composto (nicho ASC, telefone ASC, criado_em DESC) —
+        ver firestore.indexes.json.
         """
         from google.cloud import firestore
 
         consulta = (
             self._col()
+            .where(filter=firestore.FieldFilter("nicho", "==", nicho))
             .where(filter=firestore.FieldFilter("telefone", "==", telefone))
             .order_by("criado_em", direction=firestore.Query.DESCENDING)
             .limit(limite)

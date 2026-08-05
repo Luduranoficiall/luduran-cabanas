@@ -133,3 +133,70 @@ def detectar_intencao(texto: str) -> str:
         if padrao.search(normalizado):
             return intencao
     return INTENCAO_OUTRO
+
+
+# --- Lead quente (item 2.3 do roadmap) -----------------------------------
+#
+# Marca quem demonstrou intenção real de reserva. É a métrica que separa
+# "20 pessoas conversaram" de "7 queriam mesmo reservar", e é ela que sustenta
+# a conversa dos 10% com o Adriano.
+#
+# Por isso a detecção aqui é DELIBERADAMENTE conservadora. Contar lead quente
+# demais infla o número que justifica a nossa própria comissão — o erro que
+# custa caro não é deixar passar um lead, é apresentar ao cliente um número que
+# não se sustenta quando ele for conferir caso a caso no fechamento.
+# Na dúvida, não marca.
+
+SINAL_DATA = "data_especifica"
+SINAL_PESSOAS = "numero_pessoas"
+SINAL_RESERVA = "pediu_reserva"
+
+# "dia 12", "12/03", "12 de março"
+_DATA_NUMERICA = re.compile(r"\b\d{1,2}\s*/\s*\d{1,2}\b")
+_DIA_DO_MES = re.compile(r"\bdia\s+\d{1,2}\b")
+_MESES = _padrao(
+    "janeiro", "fevereiro", "marco", "abril", "maio", "junho", "julho",
+    "agosto", "setembro", "outubro", "novembro", "dezembro",
+)
+_DIAS_SEMANA = _padrao(
+    "segunda", "terca", "quarta", "quinta", "sexta", "sabado", "domingo",
+)
+_FERIADOS = _padrao("natal", "ano novo", "carnaval", "pascoa", "feriadao")
+
+# "4 pessoas", "somos 6", "um casal"
+_QTD_PESSOAS = re.compile(r"\b\d+\s+pessoas?\b")
+_SOMOS = re.compile(r"\bsomos\s+\d+\b")
+_COMPOSICAO = _padrao("casal", "familia", "crianca", "criancas", "bebe")
+
+# Só verbo de reserva com marcador de intenção. "reserva" solto aparece em
+# "qual a política de reserva?", que é dúvida, não intenção.
+_RESERVA_EXPLICITA = _padrao(
+    "quero reservar", "vou reservar", "posso reservar", "gostaria de reservar",
+    "pretendo reservar", "quero fazer uma reserva", "fazer uma reserva",
+    "como reservo", "como faco a reserva", "como faco para reservar",
+    "quero fechar", "quero garantir", "vou querer",
+)
+
+_SINAIS: tuple[tuple[str, tuple[re.Pattern[str], ...]], ...] = (
+    (SINAL_DATA, (_DATA_NUMERICA, _DIA_DO_MES, _MESES, _DIAS_SEMANA, _FERIADOS)),
+    (SINAL_PESSOAS, (_QTD_PESSOAS, _SOMOS, _COMPOSICAO)),
+    (SINAL_RESERVA, (_RESERVA_EXPLICITA,)),
+)
+
+
+def sinais_de_reserva(texto: str) -> list[str]:
+    """Quais sinais de intenção real de reserva aparecem na mensagem.
+
+    Guardar os sinais, e não só o booleano, é o que permite à Camile conferir
+    no fechamento *por que* um lead foi marcado como quente.
+    """
+    normalizado = normalizar(texto)
+    encontrados = []
+    for sinal, padroes in _SINAIS:
+        if any(padrao.search(normalizado) for padrao in padroes):
+            encontrados.append(sinal)
+    return encontrados
+
+
+def eh_lead_quente(texto: str) -> bool:
+    return bool(sinais_de_reserva(texto))

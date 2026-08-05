@@ -30,7 +30,17 @@ class GeminiClient:
 
             if not self.cfg.gemini_api_key:
                 raise GeminiIndisponivel("GEMINI_API_KEY não configurada")
-            self._client = genai.Client(api_key=self.cfg.gemini_api_key)
+            from google.genai import types
+
+            self._client = genai.Client(
+                api_key=self.cfg.gemini_api_key,
+                # Sem teto explícito, uma chamada travada nunca retorna: a
+                # tarefa de background fica pendurada e a pessoa não recebe
+                # nem o fallback. O timeout é em milissegundos.
+                http_options=types.HttpOptions(
+                    timeout=int(self.cfg.gemini_timeout_s * 1000)
+                ),
+            )
         return self._client
 
     def responder(self, mensagem: str, historico: list[dict] | None = None) -> str:

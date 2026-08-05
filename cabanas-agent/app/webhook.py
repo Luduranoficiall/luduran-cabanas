@@ -15,6 +15,7 @@ from .intents import (
     INTENCAO_ESCALACAO,
     detectar_intencao,
     motivo_escalacao,
+    sinais_de_reserva,
 )
 from .prompts import RESPOSTA_ESCALACAO, RESPOSTA_FALLBACK
 from .storage import Storage
@@ -91,7 +92,11 @@ async def processar_mensagem(
     if texto is None:
         # Tipo não suportado: responde, mas não gasta chamada de modelo.
         if await storage.reservar_mensagem(
-            message_id, telefone, f"[{mensagem.get('type')}]", "nao_texto"
+            message_id,
+            telefone,
+            f"[{mensagem.get('type')}]",
+            "nao_texto",
+            nicho=cfg.nicho,
         ):
             await whatsapp.enviar_texto(telefone, RESPOSTA_NAO_TEXTO)
             await storage.registrar_resposta(
@@ -100,11 +105,23 @@ async def processar_mensagem(
         return
 
     intencao = detectar_intencao(texto)
+    sinais = sinais_de_reserva(texto)
 
     # A reserva é atômica: se voltar False, essa mensagem já foi tratada por
     # uma entrega anterior do mesmo webhook.
-    if not await storage.reservar_mensagem(message_id, telefone, texto, intencao):
+    if not await storage.reservar_mensagem(
+        message_id,
+        telefone,
+        texto,
+        intencao,
+        nicho=cfg.nicho,
+        lead_quente=bool(sinais),
+        sinais_lead=sinais,
+    ):
         return
+
+    if sinais:
+        logger.info("Lead quente: %s (sinais: %s)", telefone, ", ".join(sinais))
 
     await whatsapp.marcar_como_lida(message_id)
 
@@ -116,7 +133,9 @@ async def processar_mensagem(
         await _avisar_equipe(whatsapp, cfg, telefone, texto, motivo)
     else:
         escalado = False
-        historico = await storage.historico(telefone, cfg.history_limit)
+        historico = await storage.historico(
+            telefone, cfg.history_limit, nicho=cfg.nicho
+        )
         try:
             resposta = gemini.responder(texto, historico)
         except GeminiIndisponivel:
