@@ -157,6 +157,56 @@ def test_foto_de_capa_e_usada_quando_existe(cfg_cinco, tmp_path, monkeypatch):
     assert 'loading="lazy"' in secao
 
 
+def test_degrada_bem_com_foto_faltando(cfg_cinco, tmp_path, monkeypatch):
+    """O caso real: quatro cabanas com foto e uma sem.
+
+    A cabana sem foto NÃO some e NÃO quebra o grid — o cartão fica, com um
+    bloco da mesma proporção da imagem e o rótulo "foto em breve", para ler
+    como decisão e não como foto que não carregou.
+    """
+    monkeypatch.setattr(gerar_site, "FOTOS", tmp_path)
+    monkeypatch.setattr(gerar_site, "RAIZ", tmp_path.parent)
+
+    for numero in ("1", "3", "4", "5"):  # a 2 fica de fora
+        pasta = tmp_path / f"cabana{numero}"
+        pasta.mkdir()
+        (pasta / "01-capa.jpg").write_bytes(b"fake")
+
+    secao = _secao_cabanas(gerar_site.gerar(cfg_cinco))
+
+    # As cinco continuam na página, com link.
+    assert secao.count('class="cabana"') == 5
+    for numero in ("1", "2", "3", "4", "5"):
+        assert f"1992cabana{numero}" in secao
+        assert f"Cabana {numero}" in secao
+
+    # Quatro com imagem, uma com o bloco.
+    assert secao.count("<img") == 4
+    assert secao.count("cabana-foto-vazia") == 1
+    assert "foto em breve" in secao
+
+
+def test_bloco_sem_foto_fica_no_cartao_certo(cfg_cinco, tmp_path, monkeypatch):
+    """O placeholder tem que cair na cabana 2, não em outra."""
+    monkeypatch.setattr(gerar_site, "FOTOS", tmp_path)
+    monkeypatch.setattr(gerar_site, "RAIZ", tmp_path.parent)
+    for numero in ("1", "3", "4", "5"):
+        pasta = tmp_path / f"cabana{numero}"
+        pasta.mkdir()
+        (pasta / "01-capa.jpg").write_bytes(b"fake")
+
+    secao = _secao_cabanas(gerar_site.gerar(cfg_cinco))
+    cartao_2 = secao[secao.index("1992cabana2") - 400 : secao.index("Cabana 2")]
+    assert "cabana-foto-vazia" in cartao_2
+
+
+def test_placeholder_nao_e_lido_por_leitor_de_tela_como_imagem(cfg_cinco, tmp_path, monkeypatch):
+    monkeypatch.setattr(gerar_site, "FOTOS", tmp_path)
+    secao = _secao_cabanas(gerar_site.gerar(cfg_cinco))
+    assert 'aria-hidden="true"' in secao  # o ícone é decorativo
+    assert "foto em breve" in secao       # mas o texto é lido
+
+
 def test_extensao_maiuscula_tambem_e_aceita(cfg_cinco, tmp_path, monkeypatch):
     """Foto vinda de celular às vezes chega como .JPG."""
     monkeypatch.setattr(gerar_site, "FOTOS", tmp_path)

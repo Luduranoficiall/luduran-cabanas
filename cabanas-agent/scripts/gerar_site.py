@@ -63,8 +63,18 @@ def montar_cartao(numero: str, url: str, diaria: str) -> str:
             f'alt="Cabana {html.escape(numero)}" loading="lazy">'
         )
     else:
-        # Sem foto ainda: bloco neutro, para o cartão não quebrar o grid.
-        midia = '<div class="cabana-foto-vazia" aria-hidden="true">🏡</div>'
+        # Sem foto ainda. O bloco tem a mesma proporção da imagem, então o
+        # grid não desalinha, e diz o que está acontecendo — um cartão vazio
+        # no meio de quatro com foto passa impressão de página quebrada.
+        midia = (
+            '<div class="cabana-foto-vazia">\n'
+            '        <svg viewBox="0 0 24 24" stroke-width="1.4" '
+            'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+            '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/>'
+            '<path d="M10 21v-6h4v6"/></svg>\n'
+            '        <span>foto em breve</span>\n'
+            "      </div>"
+        )
 
     return (
         f'    <a class="cabana" href="{html.escape(url)}" '
@@ -110,26 +120,53 @@ def gerar(cfg: Settings | None = None) -> str:
     return template.replace(MARCADOR, montar_secao(cfg))
 
 
+LIMITE_FOTO_KB = 500
+
+
 def main() -> int:
     cfg = Settings()
     SAIDA.write_text(gerar(cfg), encoding="utf-8")
 
-    ativas = ", ".join(sorted(cfg.cabanas, key=int)) or "nenhuma"
-    print(f"{SAIDA.relative_to(RAIZ)} gerado — cabanas na página: {ativas}")
+    ativas = sorted(cfg.cabanas, key=int)
+    com_foto = [n for n in ativas if encontrar_capa(n)]
+    sem_foto = [n for n in ativas if n not in com_foto]
 
-    sem_foto = [n for n in sorted(cfg.cabanas, key=int) if not encontrar_capa(n)]
+    print(f"{SAIDA.relative_to(RAIZ)} gerado")
+    print(f"  cabanas na página : {', '.join(ativas) or 'nenhuma'}")
+    print(f"  com foto          : {', '.join(com_foto) or 'nenhuma'}")
     if sem_foto:
-        print(f"  sem foto de capa (usando bloco neutro): {', '.join(sem_foto)}")
+        print(f"  sem foto          : {', '.join(sem_foto)} (bloco 'foto em breve')")
+
+    # O repositório guarda toda versão de todo arquivo, para sempre. Foto de
+    # celular tem 4–8 MB; depois de commitada não tem como desinchar.
+    pesadas = []
+    for numero in com_foto:
+        capa = RAIZ / encontrar_capa(numero)
+        kb = capa.stat().st_size / 1024
+        if kb > LIMITE_FOTO_KB:
+            pesadas.append(f"cabana{numero} ({kb:.0f} KB)")
+
+    problemas = 0
+    if pesadas:
+        print(
+            f"\n  AVISO: foto acima de {LIMITE_FOTO_KB} KB: {', '.join(pesadas)}.\n"
+            f"  Redimensione ANTES de commitar — depois não tem como desinchar:\n"
+            f"    mogrify -resize '1600x1600>' -quality 82 assets/cabanas/cabana*/*.jpg",
+            file=sys.stderr,
+        )
+        problemas = 1
 
     if cfg.cabanas_sem_link:
         print(
-            f"  AVISO: fora da página por falta de link: "
-            f"{', '.join(cfg.cabanas_sem_link)}. "
-            f"Cadastre em CABANA_URLS.",
+            f"\n  AVISO: fora da página por falta de link: "
+            f"{', '.join(cfg.cabanas_sem_link)}. Cadastre em CABANA_URLS.",
             file=sys.stderr,
         )
-        return 1
-    return 0
+        problemas = 1
+
+    if not problemas:
+        print("\n  Tudo certo. Confira o index.html no navegador e commite.")
+    return problemas
 
 
 if __name__ == "__main__":

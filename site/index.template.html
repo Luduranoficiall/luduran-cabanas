@@ -352,14 +352,32 @@
     display:block;
     background:#111820;
   }
+  /* Cabana sem foto ainda. Precisa parecer decisão, não erro de
+     carregamento: mesma proporção da imagem, para o grid não desalinhar, e
+     um rótulo dizendo o que está acontecendo. */
   .cabana-foto-vazia{
     aspect-ratio:4/3;
     display:flex;
+    flex-direction:column;
     align-items:center;
     justify-content:center;
-    background:linear-gradient(135deg,#131c25,#0e151c);
-    color:#3d4a55;
-    font-size:26px;
+    gap:7px;
+    background:
+      repeating-linear-gradient(
+        135deg,
+        rgba(255,255,255,0.02) 0px, rgba(255,255,255,0.02) 1px,
+        transparent 1px, transparent 9px
+      ),
+      linear-gradient(135deg,#141d26,#0e151c);
+    border-bottom:1px solid var(--line);
+  }
+  .cabana-foto-vazia svg{ width:26px; height:26px; stroke:#4a5a67; fill:none; }
+  .cabana-foto-vazia span{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:9.5px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:#5a6b78;
   }
   .cabana-corpo{ padding:12px 14px 14px; }
   .cabana-nome{
