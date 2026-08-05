@@ -1,6 +1,15 @@
 # Fotos das cabanas
 
-Pasta para receber as fotos que o Adriano vai mandar. Ainda vazia.
+O gerador da página já consome esta pasta. Basta commitar as imagens no
+caminho certo e rodar:
+
+```bash
+python cabanas-agent/scripts/gerar_site.py
+git add index.html assets/cabanas && git commit
+```
+
+Sem rodar o gerador, as fotos ficam no repositório mas não aparecem na página —
+e o teste `test_index_commitado_esta_atualizado` falha para lembrar disso.
 
 ## Como nomear
 
@@ -17,7 +26,13 @@ assets/cabanas/
 ```
 
 O número da pasta tem que bater com o número usado em `CABANAS`
-(ver `cabanas-agent/.env.example`).
+(ver `cabanas-agent/.env.example`). As cinco cabanas estão no ar, então as
+pastas vão de `cabana1` a `cabana5`.
+
+O gerador pega a **primeira imagem em ordem alfabética** de cada pasta como
+capa — daí o prefixo `01-`. Aceita `.jpg`, `.jpeg`, `.png` e `.webp`, com
+extensão em maiúscula ou minúscula. Cabana sem pasta ou sem imagem continua
+com o bloco neutro, sem quebrar o grid.
 
 ## Antes de commitar
 

@@ -12,16 +12,17 @@ def _env(name: str, default: str = "") -> str:
     return os.environ.get(name, default).strip()
 
 
-# Links que a Camile confirmou por print. A cabana 3 existe, mas o anúncio
-# ainda não foi criado no Airbnb — por isso ela não está aqui. Quando o link
-# chegar, NÃO é preciso mexer neste arquivo: basta subir com
+# Links confirmados pelo cliente. As cinco cabanas estão no ar.
 #
-#   CABANAS=1,2,3,4,5
-#   CABANA_URLS=3=https://airbnb.com.br/h/o-link-que-vier
-#
+# A cabana 3 entrou aqui, e não em CABANA_URLS, porque o link agora é
+# permanente: deixá-lo só na variável de ambiente faria cada deploy depender de
+# alguém lembrar de passá-la, e esquecer derrubaria a cabana em silêncio (com
+# aviso no log, mas fora do ar mesmo assim). CABANA_URLS continua valendo para
+# link novo ou correção emergencial sem deploy.
 LINKS_CONFIRMADOS: dict[str, str] = {
     "1": "https://airbnb.com.br/h/1992cabana1",
     "2": "https://airbnb.com.br/h/1992cabana2",
+    "3": "https://airbnb.com.br/h/1992cabana3",
     "4": "https://airbnb.com.br/h/1992cabana4",
     "5": "https://airbnb.com.br/h/1992cabana5",
 }
@@ -54,13 +55,13 @@ def _cabanas_from_env() -> dict[str, str]:
     Settings.cabanas_sem_link, que aparece no log e no /health.
     """
     conhecidos = {**LINKS_CONFIRMADOS, **_urls_extras()}
-    ativas = [n.strip() for n in _env("CABANAS", "1,2,4,5").split(",") if n.strip()]
+    ativas = [n.strip() for n in _env("CABANAS", "1,2,3,4,5").split(",") if n.strip()]
     return {n: conhecidos[n] for n in ativas if n in conhecidos}
 
 
 def _cabanas_sem_link() -> list[str]:
     conhecidos = {**LINKS_CONFIRMADOS, **_urls_extras()}
-    ativas = [n.strip() for n in _env("CABANAS", "1,2,4,5").split(",") if n.strip()]
+    ativas = [n.strip() for n in _env("CABANAS", "1,2,3,4,5").split(",") if n.strip()]
     return [n for n in ativas if n not in conhecidos]
 
 

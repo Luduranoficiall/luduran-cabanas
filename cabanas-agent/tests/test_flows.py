@@ -219,40 +219,46 @@ def test_system_prompt_reflete_as_cabanas_configuradas():
 # Os testes abaixo travam esse contrato.
 
 
-def test_padrao_atual_tem_quatro_cabanas(monkeypatch):
-    """Enquanto o anúncio da 3 não sai no Airbnb, o padrão é 1,2,4,5."""
+def test_as_cinco_cabanas_estao_no_ar(monkeypatch):
+    """Link da cabana 3 confirmado pelo cliente: as cinco entram por padrão."""
     monkeypatch.delenv("CABANAS", raising=False)
     monkeypatch.delenv("CABANA_URLS", raising=False)
     cfg = Settings()
-    assert sorted(cfg.cabanas) == ["1", "2", "4", "5"]
-    assert cfg.total_cabanas == 4
-
-
-def test_ligar_cabana_3_e_so_variavel_de_ambiente(monkeypatch):
-    """O caminho completo de ativação, sem tocar em uma linha de código."""
-    monkeypatch.setenv("CABANAS", "1,2,3,4,5")
-    monkeypatch.setenv("CABANA_URLS", "3=https://airbnb.com.br/h/1992cabana3")
-    cfg = Settings()
 
     assert sorted(cfg.cabanas) == ["1", "2", "3", "4", "5"]
+    assert cfg.total_cabanas == 5
     assert cfg.cabanas["3"] == "https://airbnb.com.br/h/1992cabana3"
     assert cfg.cabanas_sem_link == []
 
-    # E o prompt acompanha sozinho, sem edição.
     prompt = build_system_prompt(cfg)
     assert "São 5 cabanas disponíveis" in prompt
     assert "Cabana 3: https://airbnb.com.br/h/1992cabana3" in prompt
 
 
-def test_cabana_sem_link_fica_fora_em_vez_de_inventar_url(monkeypatch):
-    """Ligar a 3 sem cadastrar o link não pode gerar link chutado."""
-    monkeypatch.setenv("CABANAS", "1,2,3,4,5")
+def test_desligar_uma_cabana_continua_sendo_so_configuracao(monkeypatch):
+    """Se uma cabana sair de operação, tirar do ar não exige deploy de código."""
+    monkeypatch.setenv("CABANAS", "1,2,4,5")
     monkeypatch.delenv("CABANA_URLS", raising=False)
     cfg = Settings()
 
-    assert "3" not in cfg.cabanas
-    assert cfg.cabanas_sem_link == ["3"]
+    assert sorted(cfg.cabanas) == ["1", "2", "4", "5"]
     assert "Cabana 3" not in build_system_prompt(cfg)
+
+
+def test_cabana_sem_link_fica_fora_em_vez_de_inventar_url(monkeypatch):
+    """Uma cabana nova só entra depois que o link dela é cadastrado.
+
+    A trava vale para qualquer cabana futura: sem link conhecido, o agente não
+    deriva URL por padrão de nome — link chutado vira link quebrado na mão do
+    cliente.
+    """
+    monkeypatch.setenv("CABANAS", "1,2,3,4,5,6")
+    monkeypatch.delenv("CABANA_URLS", raising=False)
+    cfg = Settings()
+
+    assert "6" not in cfg.cabanas
+    assert cfg.cabanas_sem_link == ["6"]
+    assert "Cabana 6" not in build_system_prompt(cfg)
 
 
 def test_cabana_urls_corrige_link_existente(monkeypatch):

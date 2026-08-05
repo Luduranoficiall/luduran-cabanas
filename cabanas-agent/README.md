@@ -96,7 +96,7 @@ uvicorn app.main:app --reload --port 8080
 pytest
 ```
 
-116 testes: os cinco fluxos da seção 3, os gatilhos de escalação da seção 2,
+118 testes: os cinco fluxos da seção 3, os gatilhos de escalação da seção 2,
 deduplicação de webhook, queda do Gemini, validação de assinatura, troca de
 configuração das cabanas, geração da página e o painel (autenticação,
 isolamento por nicho, métricas e CSV). Nenhum deles usa rede.
@@ -152,15 +152,11 @@ Duas variáveis controlam tudo:
 | `CABANAS` | quais cabanas estão no ar (ex.: `1,2,4,5`) |
 | `CABANA_URLS` | link de uma cabana nova ou correção de um existente (ex.: `3=https://...`) |
 
-**Hoje:** `CABANAS=1,2,4,5`. A cabana 3 existe, mas o anúncio dela ainda não
-foi criado no Airbnb.
+**Hoje:** as cinco cabanas no ar. Os links ficam em `config.py`
+(`LINKS_CONFIRMADOS`); `CABANAS` só escolhe quais estão ativas.
 
-**Quando o link da cabana 3 chegar**, é só subir com:
-
-```bash
-CABANAS=1,2,3,4,5
-CABANA_URLS=3=https://airbnb.com.br/h/o-link-que-vier
-```
+Para tirar uma de operação, basta removê-la de `CABANAS`. Para cadastrar uma
+cabana nova sem esperar deploy, use `CABANA_URLS=6=https://...`.
 
 Prompt e respostas acompanham sozinhos — `prompts.py` monta a lista de cabanas
 a partir da configuração, e `gemini_client.py` não conhece link nenhum. Tem
