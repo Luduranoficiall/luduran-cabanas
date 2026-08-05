@@ -169,7 +169,19 @@ async def _avisar_equipe(
 ) -> None:
     """Manda para a Camile o resumo da conversa que precisa de humano."""
     if not cfg.escalation_number:
-        logger.warning("ESCALATION_NUMBER não configurado — escalação só no log")
+        logger.warning("ESCALATION_NUMBER não configurado — escalação só no painel")
+        return
+    if cfg.escalacao_para_si_mesmo:
+        # A Cloud API recusa mensagem de um número para ele mesmo. Tentar só
+        # geraria erro no log; a escalação já está gravada e aparece no painel.
+        logger.error(
+            "ESCALATION_NUMBER é o próprio número do atendimento (%s) — "
+            "o aviso não pode ser enviado por WhatsApp. Conversa com %s "
+            "precisa de humano (motivo: %s). Veja /painel/escalacoes.",
+            cfg.escalation_number,
+            telefone,
+            motivo,
+        )
         return
     aviso = (
         f"🔔 Atendimento precisa de você ({motivo})\n\n"

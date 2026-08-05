@@ -12,6 +12,8 @@ real de reserva, e o CSV que a Camile cruza com a planilha dela.
 | `/painel/` | Visão do mês: pessoas atendidas, leads quentes, links enviados, tempo médio, escalações. |
 | `/painel/fechamento` | Fechamento do mês: leads quentes, conferência e totalizador. |
 | `/painel/fechamento.csv` | Mesma lista já conferida, em CSV (`;` e BOM, abre direto no Excel). |
+| `/painel/escalacoes` | Quem pediu humano e ainda espera. |
+| `/painel/auditoria` | Trilha de acesso e conferência (só admin). |
 | `/painel/telefone/{telefone}` | Conversa completa daquele número. |
 
 ## Acessos
@@ -120,6 +122,24 @@ centavo, e centavo em acerto de comissão vira discussão.
 O CSV traz o rodapé com leads quentes, confirmadas, valor e comissão, com
 vírgula decimal e sem "R$" — assim o Excel soma a coluna em vez de tratá-la
 como texto.
+
+## Escalações
+
+> ⚠️ **O aviso de escalação por WhatsApp não funciona com a configuração
+> combinada.** `ESCALATION_NUMBER` é o mesmo número do atendimento, e a Cloud
+> API recusa mensagem de um número para ele mesmo. O agente detecta e nem
+> tenta enviar — a escalação fica registrada, mas **ninguém é avisado na hora**.
+>
+> Enquanto isso não mudar, `/painel/escalacoes` é a única forma de ver quem
+> está esperando. Vale abrir todo dia. Ver o passo 6 do
+> [DEPLOY.md](DEPLOY.md).
+
+## Auditoria
+
+`/painel/auditoria`, só para admin — quem é auditado não enxerga a própria
+trilha. Mostra login, falha de login, exportação de CSV e cada alteração de
+conferência com o valor antes e depois. É o que sustenta o fechamento quando o
+Adriano pedir para conferir caso a caso.
 
 ## Métricas
 

@@ -407,6 +407,79 @@ async def fechamento_csv(
     )
 
 
+@router.get("/escalacoes", response_class=HTMLResponse)
+async def escalacoes(
+    request: Request,
+    nicho: str | None = Query(None),
+    ano: int | None = Query(None),
+    mes: int | None = Query(None),
+):
+    """Conversas que pediram humano.
+
+    Existe porque o aviso por WhatsApp não é garantido: a Cloud API recusa
+    mensagem de um número para ele mesmo, e fora da janela de 24h uma mensagem
+    livre também não sai. Esta tela é a fonte que não depende disso.
+    """
+    usuario = await _usuario(request)
+    if usuario is None:
+        return _redirect_login()
+
+    nicho_ok = _resolver_nicho(usuario, nicho)
+    if nicho_ok is None:
+        return Response("Sem acesso a este nicho.", status_code=403)
+
+    ano_atual, mes_atual_ = mes_atual()
+    ano, mes = ano or ano_atual, mes or mes_atual_
+    docs = await request.app.state.repo_painel.docs_do_periodo(
+        nicho_ok, inicio_do_mes(ano, mes), fim_do_mes(ano, mes)
+    )
+    escaladas = sorted(
+        (d for d in docs if d.get("escalado")),
+        key=lambda d: d.get("criado_em") or datetime.min.replace(tzinfo=timezone.utc),
+        reverse=True,
+    )
+
+    return templates.TemplateResponse(
+        request,
+        "escalacoes.html",
+        {
+            "usuario": usuario,
+            "nicho": nicho_ok,
+            "nichos": usuario.nichos_visiveis(list(settings.nichos_painel)),
+            "ano": ano,
+            "mes": mes,
+            "docs": escaladas,
+            "aviso_whatsapp_quebrado": settings.escalacao_para_si_mesmo,
+        },
+    )
+
+
+@router.get("/auditoria", response_class=HTMLResponse)
+async def auditoria(request: Request, limite: int = Query(200, ge=1, le=1000)):
+    """Trilha de acesso e de conferência.
+
+    Só admin: a trilha mostra o que cada pessoa fez, inclusive quem exportou
+    dado pessoal. Quem é auditado não enxerga a própria auditoria.
+    """
+    usuario = await _usuario(request)
+    if usuario is None:
+        return _redirect_login()
+    if not usuario.eh_admin:
+        return Response("Sem acesso.", status_code=403)
+
+    eventos = await request.app.state.repo_auth.listar_auditoria(limite)
+    return templates.TemplateResponse(
+        request,
+        "auditoria.html",
+        {
+            "usuario": usuario,
+            "nicho": settings.nicho,
+            "nichos": usuario.nichos_visiveis(list(settings.nichos_painel)),
+            "eventos": eventos,
+        },
+    )
+
+
 @router.get("/telefone/{telefone}", response_class=HTMLResponse)
 async def historico_telefone(
     request: Request, telefone: str, nicho: str | None = Query(None)

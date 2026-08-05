@@ -6,22 +6,34 @@
 
 ## Estado atual
 
-Na branch `claude/painel-crm`, aguardando revisão antes do merge.
+Em `main`: agente, painel, fechamento com conferência, 5 cabanas ativas.
+Na branch `claude/deploy-e-auditoria`, aguardando revisão: checklist de deploy,
+telas de escalações e auditoria.
 
 | Item | Estado |
 | --- | --- |
-| 2.3 Captura de intenção (lead quente) | ✅ feito |
-| 3.3 Campo `nicho` no Firestore | ✅ feito |
-| 2.5 Fallback do Gemini | ✅ já existia; faltava timeout, agora fechado |
-| 1.1 Cabanas na página (opção A, build) | ✅ feito |
-| 3.1 Painel base | ✅ feito |
-| 3.2 Acesso com login e três papéis | ✅ feito |
-| 3.4 Fechamento mensal com CSV | ✅ feito (veio junto, é a mesma tela) |
-| 2.1 Memória de conversa | 🟡 parcial — falta o corte de 10 msg / 30 min |
-| resto | ⬜ não começado |
+| 1.1 Cabanas na página (opção A, build) | ✅ |
+| 2.3 Captura de intenção (lead quente) | ✅ |
+| 2.5 Fallback do Gemini | ✅ |
+| 3.1 Painel base | ✅ |
+| 3.2 Acesso com login e três papéis | ✅ (virou admin / operador / leitor) |
+| 3.3 Campo `nicho` no Firestore | ✅ |
+| 3.4 Fechamento mensal com conferência e CSV | ✅ |
+| 2.1 Memória de conversa | 🟡 falta o corte de 10 msg / 30 min |
+| 2.4 Anti-loop | ⬜ |
+| 1.2–1.4, 2.2, 2.6 | ⬜ |
 
-**Linha de base preservada:** os 72 testes anteriores rodam sem alteração
-contra o código novo. Total agora: **116 testes**.
+**Total: 173 testes.**
+
+### 🔴 Bloqueia o lançamento
+
+1. **O aviso de escalação por WhatsApp não funciona.** `ESCALATION_NUMBER` é o
+   mesmo número do atendimento, e a Cloud API recusa mensagem de um número para
+   ele mesmo. Ninguém é avisado na hora. A tela `/painel/escalacoes` cobre o
+   buraco, mas exige alguém abrindo todo dia. Ver passo 6 do `DEPLOY.md`.
+2. **Migrar o número tira a secretária do WhatsApp Business.** É difícil de
+   desfazer e muda a rotina do clube. Confirmar com a Camily e o Adriano.
+3. **Prazo de retenção das conversas não definido** (LGPD).
 
 ---
 

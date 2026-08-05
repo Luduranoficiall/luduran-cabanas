@@ -98,53 +98,23 @@ uvicorn app.main:app --reload --port 8080
 pytest
 ```
 
-159 testes: os cinco fluxos da seção 3, os gatilhos de escalação da seção 2,
+173 testes: os cinco fluxos da seção 3, os gatilhos de escalação da seção 2,
 deduplicação de webhook, queda do Gemini, validação de assinatura, troca de
 configuração das cabanas, geração da página e o painel (autenticação,
-isolamento por nicho, métricas, conferência do fechamento, cálculo da comissão
-e CSV). Nenhum deles usa rede.
+isolamento por nicho, métricas, conferência do fechamento, cálculo da comissão,
+CSV, escalações e auditoria). Nenhum deles usa rede.
 
 ## Deploy no Cloud Run
 
-Credenciais vão para o Secret Manager, nunca para a imagem:
+**Checklist completo, na ordem exata: [DEPLOY.md](DEPLOY.md).**
 
-```bash
-PROJECT=serious-trainer-465716-j9
-REGION=us-central1
+Resumido: ligar as APIs → criar o Firestore → pegar as credenciais (Gemini e
+Meta) → guardar no Secret Manager → permissões da conta de serviço → índices →
+deploy → conferir `/health` → só então apontar o webhook na Meta.
 
-for s in GEMINI_API_KEY WHATSAPP_TOKEN WHATSAPP_VERIFY_TOKEN WHATSAPP_APP_SECRET; do
-  printf "valor-aqui" | gcloud secrets create $s --data-file=- --project=$PROJECT
-done
-
-gcloud run deploy cabanas-agent \
-  --source . \
-  --project=$PROJECT \
-  --region=$REGION \
-  --allow-unauthenticated \
-  --set-env-vars="GCP_PROJECT_ID=$PROJECT,FIRESTORE_COLLECTION=cabanas_leads,WHATSAPP_PHONE_NUMBER_ID=...,ESCALATION_NUMBER=...,CABANAS=1,2,3,4,5" \
-  --set-secrets="GEMINI_API_KEY=GEMINI_API_KEY:latest,WHATSAPP_TOKEN=WHATSAPP_TOKEN:latest,WHATSAPP_VERIFY_TOKEN=WHATSAPP_VERIFY_TOKEN:latest,WHATSAPP_APP_SECRET=WHATSAPP_APP_SECRET:latest"
-```
-
-`--allow-unauthenticated` é necessário: quem chama é a Meta, que não faz login
-no GCP. Quem protege o endpoint é a assinatura `X-Hub-Signature-256`, por isso
-`WHATSAPP_APP_SECRET` é obrigatório em produção.
-
-Índice do Firestore (a consulta de histórico não funciona sem ele):
-
-```bash
-gcloud firestore indexes create --project=$PROJECT # ou:
-firebase deploy --only firestore:indexes          # usa firestore.indexes.json
-```
-
-## Configurar o webhook na Meta
-
-1. App → WhatsApp → Configuration → Webhook
-2. **Callback URL:** `https://SEU-SERVICO.run.app/webhook`
-3. **Verify token:** o mesmo valor de `WHATSAPP_VERIFY_TOKEN`
-4. Assinar o campo **`messages`**
-
-A Meta faz um `GET /webhook` na hora de salvar. Se der erro, confira se o
-serviço está no ar e se o token bate.
+A URL do Cloud Run só existe depois do deploy, e é por isso que o webhook é o
+penúltimo passo. O `verify_token` não trava a ordem: quem escolhe o valor
+somos nós.
 
 ## Ligar/desligar cabanas sem mexer no código
 

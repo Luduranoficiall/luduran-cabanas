@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% set pagina = 'escalacoes' %}
+{% block titulo %}Escalações{% endblock %}
+{% block conteudo %}
+<h1>Precisam de humano — {{ nicho }}</h1>
+<p class="legenda">{{ '%02d'|format(mes) }}/{{ ano }} · {{ docs|length }} conversa(s)</p>
+
+{% include "_filtros.html" %}
+
+{% if aviso_whatsapp_quebrado %}
+<div class="aviso" role="alert" style="border-color:rgba(201,128,63,.5);color:#e2b48a;">
+  <strong>O aviso por WhatsApp não está sendo enviado.</strong>
+  O número de escalação é o mesmo número do atendimento, e a Cloud API não
+  entrega mensagem de um número para ele mesmo. Enquanto isso não mudar,
+  <strong>esta tela é a única forma de ver quem está esperando</strong> — vale
+  abrir todo dia.
+</div>
+{% endif %}
+
+{% if docs %}
+<div class="rolagem">
+  <table>
+    <thead><tr><th>Quando</th><th>Telefone</th><th>Mensagem</th><th>Intenção</th><th>Lead</th></tr></thead>
+    <tbody>
+      {% for d in docs %}
+      <tr>
+        <td>{{ d.criado_em|data_br }}</td>
+        <td><a href="/painel/telefone/{{ d.telefone }}?nicho={{ nicho }}">+{{ d.telefone }}</a></td>
+        <td style="white-space:normal;max-width:340px;">{{ d.texto }}</td>
+        <td>{{ d.intencao }}</td>
+        <td>{% if d.lead_quente %}<span class="tag tag-quente">quente</span>{% else %}—{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="rolagem"><div class="vazio">Ninguém esperando neste mês.</div></div>
+{% endif %}
+{% endblock %}

@@ -142,6 +142,7 @@ class RepoAuth(Protocol):
     async def buscar_sessao(self, token_hash: str) -> tuple[str, datetime] | None: ...
     async def apagar_sessao(self, token_hash: str) -> None: ...
     async def registrar_auditoria(self, evento: dict) -> None: ...
+    async def listar_auditoria(self, limite: int = 200) -> list[dict]: ...
 
 
 @dataclass
@@ -166,6 +167,9 @@ class RepoAuthMemoria:
 
     async def registrar_auditoria(self, evento: dict) -> None:
         self.auditoria.append(evento)
+
+    async def listar_auditoria(self, limite: int = 200) -> list[dict]:
+        return list(reversed(self.auditoria))[:limite]
 
 
 class RepoAuthFirestore:
@@ -221,6 +225,17 @@ class RepoAuthFirestore:
 
     async def registrar_auditoria(self, evento: dict) -> None:
         await self._get_client().collection("painel_auditoria").add(evento)
+
+    async def listar_auditoria(self, limite: int = 200) -> list[dict]:
+        from google.cloud import firestore
+
+        consulta = (
+            self._get_client()
+            .collection("painel_auditoria")
+            .order_by("quando", direction=firestore.Query.DESCENDING)
+            .limit(limite)
+        )
+        return [doc.to_dict() async for doc in consulta.stream()]
 
 
 # --- Tentativas de login --------------------------------------------------

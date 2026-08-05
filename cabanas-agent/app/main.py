@@ -32,6 +32,15 @@ async def lifespan(app: FastAPI):
         # para considerar a revisão saudável. Mas fica gritando no log.
         logger.error("Variáveis de ambiente faltando: %s", ", ".join(faltando))
 
+    if settings.escalacao_para_si_mesmo:
+        logger.error(
+            "ESCALATION_NUMBER (%s) é o mesmo número do atendimento. A Cloud "
+            "API não entrega mensagem de um número para ele mesmo: o aviso de "
+            "escalação NÃO será enviado. As escalações continuam registradas e "
+            "aparecem em /painel/escalacoes.",
+            settings.escalation_number,
+        )
+
     if settings.cabanas_sem_link:
         # Aconteceu de listar uma cabana em CABANAS sem cadastrar a URL dela.
         # Ela fica fora do ar de propósito: link inventado vira link quebrado
@@ -88,6 +97,11 @@ async def health() -> dict[str, object]:
         "cabanas": sorted(settings.cabanas),
         "cabanas_sem_link": settings.cabanas_sem_link,
         "numero_atendimento": settings.whatsapp_phone_number,
+        "aviso_escalacao_por_whatsapp": (
+            "quebrado: mesmo número do atendimento"
+            if settings.escalacao_para_si_mesmo
+            else "ok"
+        ),
         "modelo": settings.gemini_model,
         "config_faltando": settings.faltando(),
     }

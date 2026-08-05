@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% set pagina = 'auditoria' %}
+{% block titulo %}Auditoria{% endblock %}
+{% block conteudo %}
+<h1>Trilha de auditoria</h1>
+<p class="legenda">Últimos {{ eventos|length }} eventos · acesso e conferência</p>
+
+<div class="aviso">
+  Guarda quem entrou, quem exportou dado pessoal e cada alteração de
+  conferência, com o valor antes e depois. É o que sustenta o fechamento
+  quando alguém pedir para conferir caso a caso.
+</div>
+
+{% if eventos %}
+<div class="rolagem">
+  <table>
+    <thead><tr><th>Quando</th><th>Quem</th><th>Ação</th><th>Detalhe</th><th>IP</th></tr></thead>
+    <tbody>
+      {% for e in eventos %}
+      <tr>
+        <td>{{ e.quando|data_br }}</td>
+        <td>{{ e.quem }}</td>
+        <td>
+          {% if e.acao == 'conferencia' %}<span class="tag tag-quente">conferência</span>
+          {% elif e.acao == 'exportou_csv' %}<span class="tag tag-quente">exportou CSV</span>
+          {% else %}<span class="tag">{{ e.acao }}</span>{% endif %}
+        </td>
+        <td style="white-space:normal;max-width:420px;color:var(--text-lo);">{{ e.detalhe or '—' }}</td>
+        <td style="color:var(--text-lo);">{{ e.ip or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="rolagem"><div class="vazio">Nenhum evento registrado.</div></div>
+{% endif %}
+{% endblock %}

@@ -12,6 +12,11 @@ def _env(name: str, default: str = "") -> str:
     return os.environ.get(name, default).strip()
 
 
+def so_digitos(telefone: str) -> str:
+    """Normaliza "+55 54 98448-7198" em "5554984487198"."""
+    return "".join(c for c in telefone if c.isdigit())
+
+
 # Links confirmados pelo cliente. As cinco cabanas estão no ar.
 #
 # A cabana 3 entrou aqui, e não em CABANA_URLS, porque o link agora é
@@ -124,6 +129,21 @@ class Settings:
     @property
     def total_cabanas(self) -> int:
         return len(self.cabanas)
+
+    @property
+    def escalacao_para_si_mesmo(self) -> bool:
+        """Se o aviso de escalação iria para o próprio número do atendimento.
+
+        A Cloud API recusa mensagem de um número para ele mesmo, então nesse
+        caso o aviso nunca chega — falha silenciosa justamente no caminho que
+        existe para não perder cliente. Quando isso acontece, o agente nem
+        tenta enviar: a escalação fica registrada e aparece no painel.
+        """
+        if not self.escalation_number or not self.whatsapp_phone_number:
+            return False
+        return so_digitos(self.escalation_number) == so_digitos(
+            self.whatsapp_phone_number
+        )
 
     def faltando(self) -> list[str]:
         """Credenciais obrigatórias que não foram configuradas."""

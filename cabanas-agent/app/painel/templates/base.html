@@ -77,6 +77,10 @@
   <nav>
     <a href="/painel/?nicho={{ nicho }}" class="{{ 'ativo' if pagina == 'painel' }}">Visão do mês</a>
     <a href="/painel/fechamento?nicho={{ nicho }}" class="{{ 'ativo' if pagina == 'fechamento' }}">Fechamento</a>
+    <a href="/painel/escalacoes?nicho={{ nicho }}" class="{{ 'ativo' if pagina == 'escalacoes' }}">Escalações</a>
+    {% if usuario.eh_admin %}
+    <a href="/painel/auditoria" class="{{ 'ativo' if pagina == 'auditoria' }}">Auditoria</a>
+    {% endif %}
   </nav>
   <div class="topo-dir">
     <span>{{ usuario.email }}{% if usuario.eh_admin %} · admin{% else %} · leitura{% endif %}</span>
