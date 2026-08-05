@@ -99,6 +99,11 @@ class Settings:
             n.strip() for n in _env("NICHOS_PAINEL", "cabanas").split(",") if n.strip()
         )
     )
+    # Percentual da Luduran sobre as reservas confirmadas, usado no fechamento.
+    # Combinado com o Adriano: 10%.
+    comissao_percentual: float = field(
+        default_factory=lambda: float(_env("COMISSAO_PERCENTUAL", "10"))
+    )
     # Cookie de sessão só sai por HTTPS. Desligar apenas em teste local.
     cookie_seguro: bool = field(
         default_factory=lambda: _env("COOKIE_SEGURO", "1") not in ("0", "false", "no")

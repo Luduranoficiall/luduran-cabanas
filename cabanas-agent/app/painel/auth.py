@@ -33,7 +33,13 @@ COOKIE_SESSAO = "painel_sessao"
 DURACAO_SESSAO = timedelta(hours=8)
 
 PAPEL_ADMIN = "admin"
+# Lê e marca conferência de reserva. É o papel da Camily: ela precisa gravar
+# quais leads viraram reserva de fato.
+PAPEL_OPERADOR = "operador"
+# Só lê. É o papel do Adriano: ele confere o fechamento, não edita.
 PAPEL_LEITOR = "leitor"
+
+PAPEIS = (PAPEL_ADMIN, PAPEL_OPERADOR, PAPEL_LEITOR)
 
 # scrypt com os parâmetros recomendados para uso interativo.
 _SCRYPT_N = 2**14
@@ -55,6 +61,16 @@ class Usuario:
 
     def pode_ver(self, nicho: str) -> bool:
         return self.eh_admin or nicho in self.nichos
+
+    def pode_conferir(self, nicho: str) -> bool:
+        """Se pode marcar reserva confirmada neste nicho.
+
+        A conferência alimenta o cálculo da comissão, então é escrita — e o
+        Adriano, que audita o fechamento, não deve poder editar o que audita.
+        """
+        if not self.pode_ver(nicho):
+            return False
+        return self.papel in (PAPEL_ADMIN, PAPEL_OPERADOR)
 
     def nichos_visiveis(self, todos: list[str]) -> list[str]:
         if self.eh_admin:
@@ -98,6 +114,23 @@ _HASH_ISCA = gerar_hash(secrets.token_urlsafe(16))
 
 def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
+
+
+# --- CSRF -----------------------------------------------------------------
+#
+# A conferência é escrita que mexe no valor da comissão, então não basta o
+# SameSite=Lax do cookie. O token sai do próprio token de sessão via HMAC:
+# quem não tem a sessão não consegue forjá-lo, e não precisa guardar nada.
+
+
+def csrf_token(token_sessao: str) -> str:
+    return hmac.new(token_sessao.encode(), b"csrf", hashlib.sha256).hexdigest()
+
+
+def csrf_valido(token_sessao: str | None, enviado: str | None) -> bool:
+    if not token_sessao or not enviado:
+        return False
+    return hmac.compare_digest(csrf_token(token_sessao), enviado)
 
 
 # --- Repositório de usuários e sessões ------------------------------------

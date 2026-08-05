@@ -7,11 +7,17 @@ nem para variável de ambiente. No banco fica só o hash scrypt.
 Uso:
     python cabanas-agent/scripts/criar_usuario.py lucas@luduran.com --papel admin
     python cabanas-agent/scripts/criar_usuario.py adriano@exemplo.com --nichos cabanas
-    python cabanas-agent/scripts/criar_usuario.py camile@exemplo.com --nichos cabanas
+    python cabanas-agent/scripts/criar_usuario.py camily@exemplo.com --papel operador --nichos cabanas
     python cabanas-agent/scripts/criar_usuario.py alguem@exemplo.com --desativar
 
-`--papel admin` dá acesso a todos os nichos. `leitor` (padrão) só enxerga o que
-estiver em `--nichos`.
+Papéis:
+  admin     todos os nichos, lê e confere
+  operador  só os nichos de --nichos, lê e confere (Camily)
+  leitor    só os nichos de --nichos, apenas lê (Adriano)
+
+Quem confere marca quais leads viraram reserva, e isso entra no cálculo da
+comissão. Por isso o Adriano, que audita o fechamento, é `leitor`: ele não
+deve poder editar o que audita.
 """
 
 from __future__ import annotations
@@ -24,7 +30,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.config import settings  # noqa: E402
-from app.painel.auth import PAPEL_ADMIN, PAPEL_LEITOR, gerar_hash  # noqa: E402
+from app.painel.auth import PAPEIS, PAPEL_ADMIN, PAPEL_LEITOR, gerar_hash  # noqa: E402
 
 TAMANHO_MINIMO = 12
 
@@ -41,7 +47,7 @@ def pedir_senha() -> str:
 def main() -> int:
     p = argparse.ArgumentParser(description="Cria ou atualiza usuário do painel.")
     p.add_argument("email")
-    p.add_argument("--papel", choices=[PAPEL_ADMIN, PAPEL_LEITOR], default=PAPEL_LEITOR)
+    p.add_argument("--papel", choices=list(PAPEIS), default=PAPEL_LEITOR)
     p.add_argument(
         "--nichos",
         default="cabanas",

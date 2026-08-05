@@ -57,10 +57,22 @@ class Lead:
     sinais: set[str] = field(default_factory=set)
     link_enviado: bool = False
     escalado: bool = False
+    # O que a pessoa escreveu nas mensagens marcadas como quentes. É o que
+    # deixa a linha conferível sem precisar abrir o histórico.
+    perguntas: list[str] = field(default_factory=list)
 
     @property
     def sinais_texto(self) -> str:
         return ", ".join(sorted(self.sinais)) or "—"
+
+    @property
+    def pergunta(self) -> str:
+        """A primeira pergunta quente — a que explica por que o lead entrou."""
+        return self.perguntas[0] if self.perguntas else "—"
+
+    def pergunta_curta(self, limite: int = 90) -> str:
+        texto = self.pergunta
+        return texto if len(texto) <= limite else texto[: limite - 1] + "…"
 
 
 def _como_datetime(valor: Any) -> datetime | None:
@@ -105,7 +117,15 @@ def agrupar_leads(docs: Iterable[dict[str, Any]]) -> list[Lead]:
     """Agrupa por telefone quem teve pelo menos uma mensagem marcada quente."""
     por_telefone: dict[str, Lead] = {}
 
-    for doc in docs:
+    # Em ordem cronológica: sem isso, "a primeira pergunta" dependeria da ordem
+    # em que o Firestore devolveu os documentos.
+    ordenados = sorted(
+        docs,
+        key=lambda d: _como_datetime(d.get("criado_em"))
+        or datetime.min.replace(tzinfo=timezone.utc),
+    )
+
+    for doc in ordenados:
         if not doc.get("lead_quente"):
             continue
         telefone = doc.get("telefone", "")
@@ -114,6 +134,9 @@ def agrupar_leads(docs: Iterable[dict[str, Any]]) -> list[Lead]:
         lead.sinais.update(doc.get("sinais_lead") or [])
         lead.link_enviado = lead.link_enviado or bool(doc.get("link_enviado"))
         lead.escalado = lead.escalado or bool(doc.get("escalado"))
+        texto = (doc.get("texto") or "").strip()
+        if texto:
+            lead.perguntas.append(texto)
 
         criado = _como_datetime(doc.get("criado_em"))
         if criado:

@@ -10,6 +10,7 @@ from fastapi import FastAPI
 from .config import settings
 from .gemini_client import GeminiClient
 from .painel.auth import ControleTentativas, RepoAuthFirestore, RepoAuthMemoria
+from .painel.conferencia import RepoConferenciaFirestore, RepoConferenciaMemoria
 from .painel.repositorio import RepoPainelFirestore, RepoPainelMemoria
 from .painel.rotas import router as painel_router
 from .storage import MemoryStorage, build_storage
@@ -50,9 +51,11 @@ async def lifespan(app: FastAPI):
     if isinstance(app.state.storage, MemoryStorage):
         app.state.repo_painel = RepoPainelMemoria(app.state.storage)
         app.state.repo_auth = RepoAuthMemoria()
+        app.state.repo_conferencia = RepoConferenciaMemoria()
     else:
         app.state.repo_painel = RepoPainelFirestore(settings)
         app.state.repo_auth = RepoAuthFirestore(settings)
+        app.state.repo_conferencia = RepoConferenciaFirestore(settings)
     app.state.tentativas_login = ControleTentativas()
 
     logger.info(

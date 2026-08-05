@@ -61,9 +61,11 @@ dado que já está em produção.
 
 ## Painel
 
-Roda no mesmo serviço, sob `/painel`: visão do mês, fechamento com os leads
-quentes e exportação em CSV. Login de verdade, três níveis de acesso e filtro
-por nicho. Ver [PAINEL.md](PAINEL.md).
+Roda no mesmo serviço, sob `/painel`: visão do mês e fechamento mensal com a
+lista de leads quentes pronta para conferência — a Camily marca o que virou
+reserva, informa o valor, e o painel calcula os 10% e exporta o CSV. Login de
+verdade, três papéis (admin / operador / leitor) e filtro por nicho.
+Ver [PAINEL.md](PAINEL.md).
 
 ## Página de demonstração
 
@@ -96,10 +98,11 @@ uvicorn app.main:app --reload --port 8080
 pytest
 ```
 
-118 testes: os cinco fluxos da seção 3, os gatilhos de escalação da seção 2,
+159 testes: os cinco fluxos da seção 3, os gatilhos de escalação da seção 2,
 deduplicação de webhook, queda do Gemini, validação de assinatura, troca de
 configuração das cabanas, geração da página e o painel (autenticação,
-isolamento por nicho, métricas e CSV). Nenhum deles usa rede.
+isolamento por nicho, métricas, conferência do fechamento, cálculo da comissão
+e CSV). Nenhum deles usa rede.
 
 ## Deploy no Cloud Run
 

@@ -10,22 +10,25 @@ real de reserva, e o CSV que a Camile cruza com a planilha dela.
 | --- | --- |
 | `/painel/login` | Entrada. E-mail e senha. |
 | `/painel/` | Visão do mês: pessoas atendidas, leads quentes, links enviados, tempo médio, escalações. |
-| `/painel/fechamento` | Lista de leads quentes do mês, com os sinais que marcaram cada um. |
-| `/painel/fechamento.csv` | Mesma lista em CSV (`;` e BOM, abre direto no Excel em português). |
+| `/painel/fechamento` | Fechamento do mês: leads quentes, conferência e totalizador. |
+| `/painel/fechamento.csv` | Mesma lista já conferida, em CSV (`;` e BOM, abre direto no Excel). |
 | `/painel/telefone/{telefone}` | Conversa completa daquele número. |
 
 ## Acessos
 
-| Quem | Papel | Enxerga |
-| --- | --- | --- |
-| Lucas | `admin` | todos os nichos |
-| Adriano | `leitor` | só `cabanas` |
-| Camile | `leitor` | só `cabanas` |
+| Quem | Papel | Enxerga | Confere |
+| --- | --- | --- | --- |
+| Lucas | `admin` | todos os nichos | sim |
+| Camily | `operador` | só `cabanas` | sim |
+| Adriano | `leitor` | só `cabanas` | **não** |
+
+O Adriano é `leitor` de propósito: ele audita o fechamento, e quem audita não
+deve poder editar o que audita. A conferência alimenta o cálculo da comissão.
 
 ```bash
 python cabanas-agent/scripts/criar_usuario.py lucas@luduran.com   --papel admin
-python cabanas-agent/scripts/criar_usuario.py adriano@exemplo.com --nichos cabanas
-python cabanas-agent/scripts/criar_usuario.py camile@exemplo.com  --nichos cabanas
+python cabanas-agent/scripts/criar_usuario.py camily@exemplo.com  --papel operador --nichos cabanas
+python cabanas-agent/scripts/criar_usuario.py adriano@exemplo.com --papel leitor   --nichos cabanas
 
 # tirar acesso (desativa e derruba as sessões abertas na hora)
 python cabanas-agent/scripts/criar_usuario.py alguem@exemplo.com --desativar
@@ -67,6 +70,56 @@ e pelo `Referer`. O que está implementado:
   quanto tempo manter e o que fazer depois (apagar ou anonimizar o telefone).
 - Não há tela de gestão de usuários — é pelo script, de propósito: menos
   superfície exposta na internet.
+
+## Fechamento mensal
+
+O que a Camily faz, e só isso: abre o mês, confere e exporta. A lista já vem
+pronta — nenhuma planilha montada do zero.
+
+Cada linha traz **telefone**, **data e hora do contato**, **o que a pessoa
+perguntou** (a primeira mensagem que a marcou como lead) e **por que virou
+lead** (os sinais). Ao lado, os campos que ela preenche:
+
+| Campo | Para quê |
+| --- | --- |
+| ☑ Reserva? | virou reserva de fato no Airbnb |
+| Valor da reserva | quanto foi, em reais — é a base dos 10% |
+| Observação | anotação livre (ex.: "3 noites") |
+
+Salva a tabela inteira de uma vez. O totalizador em cima mostra leads quentes,
+confirmadas, valor confirmado e a comissão.
+
+### Por que o valor é digitado
+
+O sistema sabe quem demonstrou intenção, mas **não sabe quanto a reserva
+valeu** — ela é fechada no Airbnb, fora daqui, e pode ser de uma ou de várias
+noites, com desconto ou taxa. Calcular a comissão a partir da diária de R$150
+daria um número que não bate com o extrato do Airbnb, e o Adriano confere caso
+a caso.
+
+Por isso: a marcação mínima é o checkbox, e o valor é opcional. Se uma reserva
+for confirmada sem valor, o painel **não** finge que fechou — mostra o aviso
+"comissão subestimada" na tela e no rodapé do CSV, com a contagem de quantas
+faltam.
+
+### Auditoria da conferência
+
+Toda alteração vira registro em `painel_auditoria`, com o de-para:
+
+```
+camily@exemplo.com | cabanas 2026-03 5554999990001:
+    sem conferência -> confirmada R$ 450,00
+camily@exemplo.com | cabanas 2026-03 5554999990001:
+    confirmada R$ 450,00 -> confirmada R$ 600,00
+```
+
+Salvar sem mudar nada não gera registro — a trilha fica limpa para o Adriano
+ler. Valores ficam em **centavos, inteiro**: somar float acumula diferença de
+centavo, e centavo em acerto de comissão vira discussão.
+
+O CSV traz o rodapé com leads quentes, confirmadas, valor e comissão, com
+vírgula decimal e sem "R$" — assim o Excel soma a coluna em vez de tratá-la
+como texto.
 
 ## Métricas
 

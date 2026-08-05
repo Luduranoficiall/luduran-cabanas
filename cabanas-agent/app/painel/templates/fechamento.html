@@ -3,36 +3,121 @@
 {% block titulo %}Fechamento{% endblock %}
 {% block conteudo %}
 <h1>Fechamento — {{ nicho }}</h1>
-<p class="legenda">{{ '%02d'|format(mes) }}/{{ ano }} · {{ leads|length }} lead(s) com intenção de reserva</p>
+<p class="legenda">
+  {{ '%02d'|format(mes) }}/{{ ano }} · {{ leads|length }} lead(s) com intenção de reserva
+</p>
 
 {% include "_filtros.html" %}
 
+{% if erro == 'valor_invalido' %}
+<div class="aviso" role="alert" style="border-color:rgba(201,128,63,.5);color:#e2b48a;">
+  Valor inválido. Use o formato <strong>1.234,56</strong> — nada foi salvo.
+</div>
+{% elif salvo %}
+<div class="aviso" role="status" style="border-color:rgba(78,168,122,.45);color:#8ed0ac;">
+  {% if salvo|int > 0 %}Conferência salva ({{ salvo }} linha(s) alterada(s)).
+  {% else %}Nada mudou desde a última vez.{% endif %}
+</div>
+{% endif %}
+
+<!-- Totalizador: é o que fecha a conta do mês. -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px;">
+  {% macro tile(rotulo, valor, nota='', destaque=false) %}
+  <div style="border:1px solid {{ 'rgba(227,165,69,.4)' if destaque else 'var(--line)' }};
+              border-radius:12px;padding:14px 16px;
+              background:{{ 'rgba(227,165,69,.05)' if destaque else 'transparent' }};">
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-lo);margin-bottom:7px;">{{ rotulo }}</div>
+    <div class="num" style="font-size:22px;font-weight:700;{{ 'color:var(--amber);' if destaque }}">{{ valor }}</div>
+    {% if nota %}<div style="font-size:11.5px;color:var(--text-lo);margin-top:4px;">{{ nota }}</div>{% endif %}
+  </div>
+  {% endmacro %}
+
+  {{ tile('Leads quentes', totais.leads_quentes, 'no mês') }}
+  {{ tile('Confirmadas', totais.confirmadas, 'viraram reserva') }}
+  {{ tile('Valor confirmado', totais.valor_total_texto) }}
+  {{ tile('Comissão ' ~ '%g'|format(totais.percentual) ~ '%', totais.comissao_texto, 'sobre as confirmadas', true) }}
+</div>
+
+{% if not totais.total_confiavel %}
+<div class="aviso" role="alert" style="border-color:rgba(201,128,63,.5);color:#e2b48a;">
+  <strong>{{ totais.confirmadas_sem_valor }} reserva(s) confirmada(s) sem valor informado.</strong>
+  A comissão acima está subestimada — preencha o valor para o total fechar.
+</div>
+{% endif %}
+
 <p style="margin-bottom:18px;">
-  <a class="btn" href="/painel/fechamento.csv?nicho={{ nicho }}&amp;ano={{ ano }}&amp;mes={{ mes }}">Baixar CSV</a>
+  <a class="btn btn-sec" href="/painel/fechamento.csv?nicho={{ nicho }}&amp;ano={{ ano }}&amp;mes={{ mes }}">Baixar CSV</a>
 </p>
 
 {% if leads %}
-<div class="rolagem">
-  <table>
-    <thead>
-      <tr><th>Telefone</th><th>Primeiro contato</th><th>Último contato</th>
-          <th>Msgs</th><th>Sinais</th><th>Link</th><th>Humano</th></tr>
-    </thead>
-    <tbody>
-      {% for lead in leads %}
-      <tr>
-        <td><a href="/painel/telefone/{{ lead.telefone }}?nicho={{ nicho }}">+{{ lead.telefone }}</a></td>
-        <td>{{ lead.primeiro_contato|data_br }}</td>
-        <td>{{ lead.ultimo_contato|data_br }}</td>
-        <td class="num">{{ lead.mensagens }}</td>
-        <td><span class="tag tag-quente">{{ lead.sinais_texto }}</span></td>
-        <td>{{ 'sim' if lead.link_enviado else '—' }}</td>
-        <td>{{ 'sim' if lead.escalado else '—' }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+<form method="post" action="/painel/conferencia">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <input type="hidden" name="nicho" value="{{ nicho }}">
+  <input type="hidden" name="ano" value="{{ ano }}">
+  <input type="hidden" name="mes" value="{{ mes }}">
+
+  <div class="rolagem">
+    <table>
+      <thead>
+        <tr>
+          <th>Reserva?</th>
+          <th>Telefone</th>
+          <th>Contato</th>
+          <th>O que perguntou</th>
+          <th>Por que é lead</th>
+          <th>Valor da reserva</th>
+          <th>Observação</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for lead in leads %}
+        {% set conf = conferencias.get(lead.telefone) %}
+        <tr>
+          <td>
+            <input type="hidden" name="telefone" value="{{ lead.telefone }}">
+            <input type="checkbox" name="confirmado" value="{{ lead.telefone }}"
+                   aria-label="Reserva confirmada para {{ lead.telefone }}"
+                   {{ 'checked' if conf and conf.confirmado }}
+                   {{ 'disabled' if not pode_conferir }}
+                   style="width:17px;height:17px;accent-color:var(--amber);">
+          </td>
+          <td><a href="/painel/telefone/{{ lead.telefone }}?nicho={{ nicho }}">+{{ lead.telefone }}</a></td>
+          <td>{{ lead.primeiro_contato|data_br }}</td>
+          <td style="white-space:normal;max-width:260px;" title="{{ lead.pergunta }}">{{ lead.pergunta_curta() }}</td>
+          <td><span class="tag tag-quente">{{ lead.sinais_texto }}</span></td>
+          <td>
+            <input type="text" inputmode="decimal" name="valor_{{ lead.telefone }}"
+                   value="{{ '%d,%02d'|format(conf.valor_centavos // 100, conf.valor_centavos % 100) if conf and conf.valor_centavos is not none else '' }}"
+                   placeholder="0,00" aria-label="Valor da reserva de {{ lead.telefone }}"
+                   {{ 'disabled' if not pode_conferir }}
+                   style="width:104px;background:var(--bg-1);color:var(--text-hi);border:1px solid var(--line);border-radius:7px;padding:6px 9px;font-size:13px;text-align:right;font-variant-numeric:tabular-nums;">
+          </td>
+          <td>
+            <input type="text" name="obs_{{ lead.telefone }}" maxlength="200"
+                   value="{{ conf.observacao if conf else '' }}"
+                   aria-label="Observação sobre {{ lead.telefone }}"
+                   {{ 'disabled' if not pode_conferir }}
+                   style="width:150px;background:var(--bg-1);color:var(--text-hi);border:1px solid var(--line);border-radius:7px;padding:6px 9px;font-size:13px;">
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if pode_conferir %}
+  <div style="display:flex;align-items:center;gap:14px;margin-top:16px;flex-wrap:wrap;">
+    <button class="btn" type="submit">Salvar conferência</button>
+    <span class="legenda" style="margin:0;font-size:12px;">
+      Marque as que viraram reserva no Airbnb e informe o valor. Toda alteração fica registrada.
+    </span>
+  </div>
+  {% else %}
+  <p class="legenda" style="margin-top:14px;font-size:12px;">
+    Seu acesso é somente leitura — a conferência é feita pela operação.
+  </p>
+  {% endif %}
+</form>
 {% else %}
 <div class="rolagem"><div class="vazio">Nenhum lead quente neste mês.</div></div>
 {% endif %}
