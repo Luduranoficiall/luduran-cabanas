@@ -6,6 +6,8 @@ gente. Implementa a spec em [`agente-cabanas-spec.md`](../agente-cabanas-spec.md
 
 **Stack:** FastAPI + Gemini API + WhatsApp Cloud API + Firestore, rodando no Cloud Run.
 **Projeto GCP:** `serious-trainer-465716-j9` · **Região:** `us-central1`
+**Número de atendimento:** +55 54 98448-7198 (secretária do clube) — mesmo
+número que recebe as escalações.
 
 ## Como funciona
 
@@ -51,9 +53,9 @@ uvicorn app.main:app --reload --port 8080
 pytest
 ```
 
-39 testes cobrindo os cinco fluxos da seção 3, os gatilhos de escalação da
-seção 2, deduplicação de webhook, queda do Gemini e validação de assinatura.
-Nenhum deles usa rede.
+45 testes cobrindo os cinco fluxos da seção 3, os gatilhos de escalação da
+seção 2, deduplicação de webhook, queda do Gemini, validação de assinatura e a
+troca de configuração das cabanas. Nenhum deles usa rede.
 
 ## Deploy no Cloud Run
 
@@ -99,8 +101,31 @@ serviço está no ar e se o token bate.
 
 ## Ligar/desligar cabanas sem mexer no código
 
-`CABANAS=1,2,4,5` tira a cabana 3 do prompt e dos links. Serve enquanto a
-pendência com a Camile não se resolve (ver checklist da spec).
+Duas variáveis controlam tudo:
+
+| Variável | Para quê |
+| --- | --- |
+| `CABANAS` | quais cabanas estão no ar (ex.: `1,2,4,5`) |
+| `CABANA_URLS` | link de uma cabana nova ou correção de um existente (ex.: `3=https://...`) |
+
+**Hoje:** `CABANAS=1,2,4,5`. A cabana 3 existe, mas o anúncio dela ainda não
+foi criado no Airbnb.
+
+**Quando o link da cabana 3 chegar**, é só subir com:
+
+```bash
+CABANAS=1,2,3,4,5
+CABANA_URLS=3=https://airbnb.com.br/h/o-link-que-vier
+```
+
+Prompt e respostas acompanham sozinhos — `prompts.py` monta a lista de cabanas
+a partir da configuração, e `gemini_client.py` não conhece link nenhum. Tem
+teste travando isso (`test_links_de_cabana_so_existem_no_config`).
+
+**Trava de segurança:** cabana listada em `CABANAS` sem link cadastrado fica
+**fora do ar** de propósito, com erro no log e no `/health`. O agente não
+inventa URL por padrão de nome — link chutado vira link quebrado na mão do
+cliente.
 
 ## O que este agente não faz
 

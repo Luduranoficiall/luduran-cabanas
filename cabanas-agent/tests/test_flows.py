@@ -208,6 +208,88 @@ def test_system_prompt_reflete_as_cabanas_configuradas():
     assert "R$150,00" in prompt
 
 
+# --- Configuração das cabanas -------------------------------------------
+#
+# O combinado com o cliente: ligar a cabana 3 tem que ser só configuração.
+# Os testes abaixo travam esse contrato.
+
+
+def test_padrao_atual_tem_quatro_cabanas(monkeypatch):
+    """Enquanto o anúncio da 3 não sai no Airbnb, o padrão é 1,2,4,5."""
+    monkeypatch.delenv("CABANAS", raising=False)
+    monkeypatch.delenv("CABANA_URLS", raising=False)
+    cfg = Settings()
+    assert sorted(cfg.cabanas) == ["1", "2", "4", "5"]
+    assert cfg.total_cabanas == 4
+
+
+def test_ligar_cabana_3_e_so_variavel_de_ambiente(monkeypatch):
+    """O caminho completo de ativação, sem tocar em uma linha de código."""
+    monkeypatch.setenv("CABANAS", "1,2,3,4,5")
+    monkeypatch.setenv("CABANA_URLS", "3=https://airbnb.com.br/h/1992cabana3")
+    cfg = Settings()
+
+    assert sorted(cfg.cabanas) == ["1", "2", "3", "4", "5"]
+    assert cfg.cabanas["3"] == "https://airbnb.com.br/h/1992cabana3"
+    assert cfg.cabanas_sem_link == []
+
+    # E o prompt acompanha sozinho, sem edição.
+    prompt = build_system_prompt(cfg)
+    assert "São 5 cabanas disponíveis" in prompt
+    assert "Cabana 3: https://airbnb.com.br/h/1992cabana3" in prompt
+
+
+def test_cabana_sem_link_fica_fora_em_vez_de_inventar_url(monkeypatch):
+    """Ligar a 3 sem cadastrar o link não pode gerar link chutado."""
+    monkeypatch.setenv("CABANAS", "1,2,3,4,5")
+    monkeypatch.delenv("CABANA_URLS", raising=False)
+    cfg = Settings()
+
+    assert "3" not in cfg.cabanas
+    assert cfg.cabanas_sem_link == ["3"]
+    assert "Cabana 3" not in build_system_prompt(cfg)
+
+
+def test_cabana_urls_corrige_link_existente(monkeypatch):
+    monkeypatch.setenv("CABANAS", "1,2")
+    monkeypatch.setenv("CABANA_URLS", "2=https://airbnb.com.br/h/novo-link-2")
+    cfg = Settings()
+    assert cfg.cabanas["2"] == "https://airbnb.com.br/h/novo-link-2"
+    assert cfg.cabanas["1"] == "https://airbnb.com.br/h/1992cabana1"
+
+
+def test_gemini_client_monta_o_prompt_a_partir_da_config(monkeypatch):
+    """O client não guarda link nenhum: ele lê o que estiver na configuração."""
+    from app.gemini_client import GeminiClient
+
+    monkeypatch.setenv("CABANAS", "1,3")
+    monkeypatch.setenv("CABANA_URLS", "3=https://airbnb.com.br/h/link-novo-3")
+    client = GeminiClient(Settings())
+
+    assert "https://airbnb.com.br/h/link-novo-3" in client._system_prompt
+    assert "Cabana 5" not in client._system_prompt
+
+
+def test_links_de_cabana_so_existem_no_config():
+    """Trava de arquitetura.
+
+    Se um link de cabana aparecer em prompts.py ou gemini_client.py, trocar a
+    configuração deixa de bastar — e o combinado com o cliente quebra sem
+    ninguém perceber.
+    """
+    import pathlib
+    import re
+
+    app_dir = pathlib.Path(__file__).resolve().parent.parent / "app"
+    padrao = re.compile(r"airbnb\.com\.br/h/")
+
+    for arquivo in ("prompts.py", "gemini_client.py"):
+        conteudo = (app_dir / arquivo).read_text(encoding="utf-8")
+        assert not padrao.search(conteudo), (
+            f"{arquivo} tem link de cabana embutido; ele deve vir de config.py"
+        )
+
+
 def test_system_prompt_tem_as_regras_criticas():
     prompt = build_system_prompt()
     assert "NÃO confirma reservas" in prompt

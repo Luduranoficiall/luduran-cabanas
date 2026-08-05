@@ -28,6 +28,16 @@ async def lifespan(app: FastAPI):
         # para considerar a revisão saudável. Mas fica gritando no log.
         logger.error("Variáveis de ambiente faltando: %s", ", ".join(faltando))
 
+    if settings.cabanas_sem_link:
+        # Aconteceu de listar uma cabana em CABANAS sem cadastrar a URL dela.
+        # Ela fica fora do ar de propósito: link inventado vira link quebrado
+        # na mão do cliente.
+        logger.error(
+            "Cabanas ativas sem link cadastrado, ficaram de fora: %s. "
+            "Cadastre em CABANA_URLS (ex.: CABANA_URLS=3=https://...)",
+            ", ".join(settings.cabanas_sem_link),
+        )
+
     app.state.storage = build_storage(settings)
     app.state.gemini = GeminiClient(settings)
     app.state.whatsapp = WhatsAppClient(settings)
@@ -58,6 +68,8 @@ async def health() -> dict[str, object]:
     return {
         "status": "ok",
         "cabanas": sorted(settings.cabanas),
+        "cabanas_sem_link": settings.cabanas_sem_link,
+        "numero_atendimento": settings.whatsapp_phone_number,
         "modelo": settings.gemini_model,
         "config_faltando": settings.faltando(),
     }

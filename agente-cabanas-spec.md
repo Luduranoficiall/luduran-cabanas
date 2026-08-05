@@ -26,12 +26,24 @@ Links das cabanas:
 - cabana4 → https://airbnb.com.br/h/1992cabana4
 - cabana5 → https://airbnb.com.br/h/1992cabana5
 
-> ⚠️ **Pendência:** confirmar com a Camile se existe cabana3 (ela enviou 1, 2, 4
-> e 5 — o 3 nunca apareceu nos prints). Confirmar antes de subir em produção.
+> ✅ **Resolvido:** a cabana 3 existe e vai entrar. O anúncio dela ainda não foi
+> criado no Airbnb, então o link acima é o esperado, mas ainda não vale.
 >
-> O código não trava por causa disso: a variável `CABANAS` controla quais
-> cabanas entram no prompt e nos links. Subir com `CABANAS=1,2,4,5` tira a
-> cabana 3 do ar sem alterar código.
+> **No ar hoje:** `CABANAS=1,2,4,5` — quatro cabanas.
+>
+> **Quando o link chegar**, ativar por configuração, sem deploy de código:
+>
+> ```bash
+> CABANAS=1,2,3,4,5
+> CABANA_URLS=3=https://airbnb.com.br/h/o-link-que-vier
+> ```
+>
+> Cabana listada em `CABANAS` sem link cadastrado fica fora do ar de propósito,
+> com erro no log e no `/health`. O agente não deriva URL por padrão de nome:
+> link chutado vira link quebrado na mão do cliente.
+
+**Contato oficial:** +55 54 98448-7198 (secretária do clube). É o número que o
+agente atende e também o que recebe as escalações.
 
 ## 2. System prompt (Gemini)
 
@@ -176,33 +188,48 @@ transporte HTTP.
 ```bash
 GEMINI_API_KEY=
 WHATSAPP_TOKEN=
-WHATSAPP_PHONE_NUMBER_ID=
+WHATSAPP_PHONE_NUMBER_ID=              # ID da Meta, NÃO o telefone (ver abaixo)
+WHATSAPP_PHONE_NUMBER=+55 54 98448-7198  # só conferência, não vai em API
 WHATSAPP_VERIFY_TOKEN=
-WHATSAPP_APP_SECRET=          # valida a assinatura do webhook
+WHATSAPP_APP_SECRET=                   # valida a assinatura do webhook
 GCP_PROJECT_ID=serious-trainer-465716-j9
 FIRESTORE_COLLECTION=cabanas_leads
-ESCALATION_NUMBER=            # número que recebe o aviso de escalação
-CABANAS=1,2,3,4,5             # cabanas ativas
+ESCALATION_NUMBER=5554984487198        # +55 54 98448-7198, só dígitos
+CABANAS=1,2,4,5                        # cabanas no ar
+CABANA_URLS=                           # links avulsos, ex.: 3=https://...
 ```
 
 Em produção: usar Secret Manager, não `.env` no container.
 
-`WHATSAPP_APP_SECRET` e `ESCALATION_NUMBER` não estavam na spec original e
-foram acrescentados: sem o primeiro o webhook aceita requisição de qualquer
-origem que descubra a URL; sem o segundo a escalação só aparece no log e
-ninguém é avisado.
+> ⚠️ **`WHATSAPP_PHONE_NUMBER_ID` não é o telefone.** É um ID numérico de ~15
+> dígitos que a Meta gera para o número dentro da WhatsApp Business Account, e
+> não tem relação com o DDD. Pegar em **App → WhatsApp → API Setup**, campo
+> *Phone number ID*. Preencher com `5554984487198` faz toda chamada de envio
+> falhar com erro 400. O telefone em si ficou em `WHATSAPP_PHONE_NUMBER`, que
+> serve só para conferência e aparece no `/health`.
+
+`ESCALATION_NUMBER` vai sem `+` e sem pontuação — é o formato que a Cloud API
+aceita no campo `to`.
+
+`WHATSAPP_APP_SECRET`, `WHATSAPP_PHONE_NUMBER`, `ESCALATION_NUMBER` e
+`CABANA_URLS` não estavam na spec original. Os dois primeiros por segurança e
+clareza; os dois últimos porque sem eles a escalação não chega a ninguém e
+ligar uma cabana nova exigiria mexer em código.
 
 ## 7. Checklist antes de ativar
 
-- [ ] Confirmar com a Camile se cabana3 existe (ver pendência seção 1)
-- [ ] Pedir fotos das cabanas (Adriano pediu isso na primeira conversa)
-- [x] Testar os 5 fluxos da seção 3 em ambiente de teste — 39 testes, `pytest`
+- [x] Confirmar com a Camile se cabana3 existe — existe; falta o link do Airbnb
+- [ ] Receber o link da cabana 3 e ativar via `CABANAS` + `CABANA_URLS`
+- [ ] Pedir fotos das cabanas — pasta `assets/cabanas/` criada, aguardando
+- [x] Testar os 5 fluxos da seção 3 em ambiente de teste — 45 testes, `pytest`
 - [ ] Validar que o agente nunca confirma data específica — exige teste com o
       modelo real; a regra está no prompt, mas só staging comprova
 - [x] Validar que o agente escala corretamente pedido de desconto — coberto por
       teste, e a trava roda antes do modelo
-- [ ] Confirmar número oficial do WhatsApp que vai receber o webhook
-- [ ] Definir para qual número vai a escalação humana (Camile?) → `ESCALATION_NUMBER`
+- [x] Confirmar número oficial do WhatsApp — +55 54 98448-7198
+- [x] Definir para qual número vai a escalação humana — mesmo número
+- [ ] Pegar o *Phone number ID* na Meta e preencher `WHATSAPP_PHONE_NUMBER_ID`
+      (não é o telefone — ver seção 6)
 - [ ] Deploy no Cloud Run + configurar webhook na Meta
 - [ ] Criar o índice do Firestore (`firestore.indexes.json`)
 - [ ] Rodar 24h em observação antes de anunciar como "no ar"
