@@ -114,7 +114,7 @@ uvicorn app.main:app --reload --port 8080
 pytest
 ```
 
-226 testes: os cinco fluxos da seção 3, os gatilhos de escalação da seção 2,
+238 testes: os cinco fluxos da seção 3, os gatilhos de escalação da seção 2,
 deduplicação de webhook, queda do Gemini, validação de assinatura, troca de
 configuração das cabanas, geração da página e o painel (autenticação,
 isolamento por nicho, métricas, conferência do fechamento, cálculo da comissão,
@@ -123,7 +123,17 @@ trava da demo aprovada e a anonimização por retenção. Nenhum deles usa rede.
 
 ## Deploy no Cloud Run
 
-**Checklist completo, na ordem exata: [DEPLOY.md](DEPLOY.md).**
+**Para colocar no ar hoje:** [EXECUTAR-AGORA.md](../EXECUTAR-AGORA.md) — a
+sequência em blocos. O detalhe de cada passo está no
+**[DEPLOY.md](DEPLOY.md)**.
+
+Antes de gastar um deploy, confira as credenciais em 10 segundos:
+
+```bash
+set -a && source .env && set +a && python scripts/pre_deploy.py
+```
+
+Ele bate no Gemini, na Meta e no Firestore de verdade e diz qual está errada.
 
 Resumido: ligar as APIs → criar o Firestore → pegar as credenciais (Gemini e
 Meta) → guardar no Secret Manager → permissões da conta de serviço → índices →
