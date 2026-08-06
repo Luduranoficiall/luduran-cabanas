@@ -104,6 +104,17 @@ class Settings:
             n.strip() for n in _env("NICHOS_PAINEL", "cabanas").split(",") if n.strip()
         )
     )
+    # Retenção do conteúdo das conversas, em dias (LGPD). Zero = desligado.
+    #
+    # Não tem padrão de propósito: prazo é decisão de negócio, e um padrão
+    # errado apaga dado de cliente sozinho. Ver scripts/anonimizar.py.
+    retencao_dias: int = field(
+        default_factory=lambda: int(_env("RETENCAO_DIAS", "0"))
+    )
+    # Sal do apelido que substitui o telefone. Sem ele, o hash de um celular
+    # brasileiro é quebrável por força bruta em minutos.
+    retencao_sal: str = field(default_factory=lambda: _env("RETENCAO_SAL"))
+
     # Percentual da Luduran sobre as reservas confirmadas, usado no fechamento.
     # Combinado com o Adriano: 10%.
     comissao_percentual: float = field(

@@ -42,7 +42,21 @@ telas de escalações e auditoria.
 
 ### 🔴 Continua aberto
 
-- **Prazo de retenção das conversas não definido** (LGPD).
+- **Prazo de retenção: falta só o número.** O mecanismo veio do DeskcommCRM
+  (anonimizar em vez de apagar) e está pronto e testado — ligar é definir
+  `RETENCAO_DIAS`. Ver `INTEGRACAO-REPOSITORIOS.md`.
+
+### 📦 Os 11 repositórios — triagem feita
+
+Li todos. O resumo está em `INTEGRACAO-REPOSITORIOS.md`. Dois pontos precisam
+de decisão sua:
+
+- **evolution-go vs Cloud API** — são mutuamente exclusivos. Adotar o
+  evolution-go joga fora o `DEPLOY.md` inteiro e põe o número do clube sob
+  risco de banimento. Recomendo ficar na Cloud API.
+- **DeskcommCRM vs nosso painel** — se os dois contarem lead quente, o Adriano
+  recebe dois números diferentes. Decidir quem é dono do número antes de
+  integrar.
 
 ### 🔒 Demo aprovada: travada
 

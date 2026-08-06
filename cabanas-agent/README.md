@@ -114,12 +114,12 @@ uvicorn app.main:app --reload --port 8080
 pytest
 ```
 
-208 testes: os cinco fluxos da seção 3, os gatilhos de escalação da seção 2,
+226 testes: os cinco fluxos da seção 3, os gatilhos de escalação da seção 2,
 deduplicação de webhook, queda do Gemini, validação de assinatura, troca de
 configuração das cabanas, geração da página e o painel (autenticação,
 isolamento por nicho, métricas, conferência do fechamento, cálculo da comissão,
 CSV, escalações e auditoria), a memória com corte por tempo, o anti-loop e a
-trava da demo aprovada. Nenhum deles usa rede.
+trava da demo aprovada e a anonimização por retenção. Nenhum deles usa rede.
 
 ## Deploy no Cloud Run
 

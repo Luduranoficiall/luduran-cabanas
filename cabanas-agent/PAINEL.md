@@ -67,9 +67,12 @@ e pelo `Referer`. O que está implementado:
 - A trava de tentativas vive na memória da instância. Com várias instâncias no
   Cloud Run ela é atrito, não barreira. Barreira de verdade é Cloud Armor na
   frente do serviço.
-- **Retenção de dado não está definida.** A LGPD pede um prazo. Hoje a
-  conversa fica guardada indefinidamente. Precisa de decisão sua sobre por
-  quanto tempo manter e o que fazer depois (apagar ou anonimizar o telefone).
+- **Retenção: mecanismo pronto, prazo a definir.** A regra veio do
+  DeskcommCRM, que o cliente já opera — anonimizar em vez de apagar. Sai o
+  telefone e o texto; ficam nicho, intenção, lead quente, sinais e datas, então
+  **o número do fechamento continua de pé** depois da anonimização (tem teste).
+  Vem desligado: `RETENCAO_DIAS=0`. Ligar exige decidir o prazo, que precisa ser
+  maior que o ciclo de fechamento. Ver `scripts/anonimizar.py`.
 - Não há tela de gestão de usuários — é pelo script, de propósito: menos
   superfície exposta na internet.
 
