@@ -6,8 +6,8 @@ gente. Implementa a spec em [`agente-cabanas-spec.md`](../agente-cabanas-spec.md
 
 **Stack:** FastAPI + Gemini API + WhatsApp Cloud API + Firestore, rodando no Cloud Run.
 **Projeto GCP:** `serious-trainer-465716-j9` · **Região:** `us-central1`
-**Número de atendimento:** +55 54 98448-7198 (secretária do clube) — mesmo
-número que recebe as escalações.
+**Número do sistema:** +55 54 99910-3545 (chip próprio, exclusivo da Cloud API)
+**Escalação vai para:** +55 54 98448-7198 (secretária, no WhatsApp normal)
 
 ## Como funciona
 
@@ -32,7 +32,7 @@ Cada mensagem passa por quatro etapas:
    gasta mais chamada de modelo.
 1. **Trava de escalação** (`app/intents.py`) — se a mensagem pede desconto, é
    reclamação, fala de evento/grupo ou pede atendimento humano, o Gemini nem é
-   chamado. A resposta é fixa e a Camile recebe um aviso. É o que garante que
+   chamado. A resposta é fixa e a secretária recebe um aviso. É o que garante que
    "faz por 100?" nunca vira negociação.
 2. **Gemini** (`app/gemini_client.py`) — responde o resto, com o system prompt
    da seção 2 da spec e as últimas trocas como contexto: 10 trocas ou 30
@@ -85,6 +85,18 @@ A seção das cabanas sai da mesma configuração do agente (`CABANAS` /
 cadastrado não aparece, igual ao agente. Editar `site/index.template.html` sem
 rodar o gerador faz o teste `test_index_commitado_esta_atualizado` falhar.
 
+**A demo aprovada é travada por hash.** O cliente pediu que ela continue
+exatamente como está, então o gerador recusa rodar se a parte aprovada mudar:
+
+```
+ERRO: a parte aprovada da demo foi alterada.
+  O cliente aprovou essa página como está — ela não muda por acidente.
+```
+
+Mudança intencional e combinada com o cliente:
+`python cabanas-agent/scripts/gerar_site.py --travar`, que reescreve
+`site/demo-aprovada.sha256` e aparece no diff.
+
 ## Rodar local
 
 ```bash
@@ -102,12 +114,12 @@ uvicorn app.main:app --reload --port 8080
 pytest
 ```
 
-191 testes: os cinco fluxos da seção 3, os gatilhos de escalação da seção 2,
+208 testes: os cinco fluxos da seção 3, os gatilhos de escalação da seção 2,
 deduplicação de webhook, queda do Gemini, validação de assinatura, troca de
 configuração das cabanas, geração da página e o painel (autenticação,
 isolamento por nicho, métricas, conferência do fechamento, cálculo da comissão,
-CSV, escalações e auditoria), além da memória com corte por tempo e do
-anti-loop. Nenhum deles usa rede.
+CSV, escalações e auditoria), a memória com corte por tempo, o anti-loop e a
+trava da demo aprovada. Nenhum deles usa rede.
 
 ## Deploy no Cloud Run
 

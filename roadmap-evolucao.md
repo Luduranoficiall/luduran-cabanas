@@ -44,6 +44,34 @@ telas de escalações e auditoria.
 
 - **Prazo de retenção das conversas não definido** (LGPD).
 
+### 🔒 Demo aprovada: travada
+
+O cliente reforçou que a página precisa continuar exatamente como está. Isso
+virou trava mecânica, não promessa: o hash da parte aprovada fica em
+`site/demo-aprovada.sha256`, o gerador **recusa rodar** se alguém encostar, e
+dois testes cobrem — um verifica que nada mudou, outro verifica que a trava
+realmente dispara.
+
+Mudar de propósito continua possível, mas exige um ato explícito
+(`gerar_site.py --travar`) que aparece no diff do commit.
+
+### 📥 CRM do cliente — aguardando
+
+O Lucas tem um CRM e vai mandar para integrar. Nada a fazer até chegar.
+
+Quando chegar, o que ajuda a decidir rápido:
+
+- **O que ele é**: SaaS com API? planilha? sistema próprio com banco?
+- **Quem manda para quem**: o agente empurra lead para o CRM, ou o CRM lê do
+  nosso Firestore?
+- **O que ele já faz do que o painel faz** — se o CRM já fecha o mês, o painel
+  pode virar só a conferência, em vez de duas telas competindo pelo mesmo
+  número.
+
+Vale decidir isso **antes** de escrever integração: o risco aqui é o Adriano
+receber dois números diferentes de lead quente, um do painel e outro do CRM, e
+nenhum dos dois se sustentar.
+
 ---
 
 ## Parte 1 — Demo visual

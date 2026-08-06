@@ -34,6 +34,31 @@ FOTOS = RAIZ / "assets" / "cabanas"
 
 MARCADOR = "<!--CABANAS-->"
 
+# A demo foi aprovada pelo cliente e precisa continuar exatamente como está.
+# O que fica FORA do bloco delimitado abaixo (e fora do marcador) é conteúdo
+# aprovado: o hash dessa parte fica travado em site/demo-aprovada.sha256, e o
+# teste test_demo_aprovada_nao_mudou quebra se alguém encostar.
+#
+# Mudar de propósito é possível, mas exige um ato explícito:
+#     python cabanas-agent/scripts/gerar_site.py --travar
+# que reescreve o hash e aparece no diff do commit.
+INICIO_ADICAO = "  /* ==== INICIO adicao:"
+FIM_ADICAO = "  /* ==== FIM adicao: secao cabanas ==== */\n"
+TRAVA = RAIZ / "site" / "demo-aprovada.sha256"
+
+
+def parte_aprovada(template: str) -> str:
+    """O template sem as adições nossas — só o que o cliente aprovou."""
+    ini = template.index(INICIO_ADICAO)
+    fim = template.index(FIM_ADICAO) + len(FIM_ADICAO)
+    return (template[:ini] + template[fim:]).replace(MARCADOR + "\n\n", "")
+
+
+def hash_aprovado(template: str) -> str:
+    import hashlib
+
+    return hashlib.sha256(parte_aprovada(template).encode("utf-8")).hexdigest()
+
 
 def encontrar_capa(numero: str) -> str | None:
     """Caminho relativo da foto de capa, se ela já tiver sido enviada.
@@ -124,6 +149,29 @@ LIMITE_FOTO_KB = 500
 
 
 def main() -> int:
+    template = TEMPLATE.read_text(encoding="utf-8")
+
+    if "--travar" in sys.argv:
+        # Só rode isto quando a mudança na demo for intencional e combinada
+        # com o cliente. O novo hash entra no commit e fica visível na revisão.
+        novo = hash_aprovado(template)
+        TRAVA.write_text(novo + "\n", encoding="utf-8")
+        print(f"Trava da demo atualizada: {novo[:16]}…")
+        print("A demo aprovada mudou de propósito? Diga isso no commit.")
+        return 0
+
+    if TRAVA.exists() and TRAVA.read_text(encoding="utf-8").strip() != hash_aprovado(
+        template
+    ):
+        print(
+            "ERRO: a parte aprovada da demo foi alterada.\n"
+            "  O cliente aprovou essa página como está — ela não muda por acidente.\n"
+            "  Se a mudança for intencional e combinada, rode:\n"
+            "    python cabanas-agent/scripts/gerar_site.py --travar",
+            file=sys.stderr,
+        )
+        return 1
+
     cfg = Settings()
     SAIDA.write_text(gerar(cfg), encoding="utf-8")
 

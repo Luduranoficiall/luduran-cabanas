@@ -219,5 +219,51 @@ def test_extensao_maiuscula_tambem_e_aceita(cfg_cinco, tmp_path, monkeypatch):
     assert "01-capa.JPG" in _secao_cabanas(gerar_site.gerar(cfg_cinco))
 
 
+# --- Trava da demo aprovada ---------------------------------------------
+#
+# O cliente aprovou a página e pediu que ela continue exatamente assim. Isso
+# deixou de ser promessa: o hash da parte aprovada está em
+# site/demo-aprovada.sha256 e estes testes quebram se alguém encostar.
+
+
+def test_demo_aprovada_nao_mudou():
+    """A parte aprovada pelo cliente continua byte a byte igual."""
+    template = TEMPLATE.read_text(encoding="utf-8")
+    travado = (RAIZ / "site" / "demo-aprovada.sha256").read_text().strip()
+
+    assert gerar_site.hash_aprovado(template) == travado, (
+        "A demo aprovada pelo cliente foi alterada.\n"
+        "Se a mudança for intencional e combinada com ele, rode:\n"
+        "  python cabanas-agent/scripts/gerar_site.py --travar"
+    )
+
+
+def test_a_trava_realmente_pega_uma_alteracao():
+    """Uma trava que não dispara não trava nada."""
+    template = TEMPLATE.read_text(encoding="utf-8")
+    mexido = template.replace("R$300 de implementação", "R$400 de implementação")
+
+    assert mexido != template
+    assert gerar_site.hash_aprovado(mexido) != gerar_site.hash_aprovado(template)
+
+
+def test_a_trava_ignora_o_que_e_adicao_nossa():
+    """Mexer na seção das cabanas não pode acusar mudança na demo."""
+    template = TEMPLATE.read_text(encoding="utf-8")
+    mexido = template.replace(".cabana-corpo{ padding:12px 14px 14px; }",
+                              ".cabana-corpo{ padding:13px 14px 14px; }")
+
+    assert mexido != template
+    assert gerar_site.hash_aprovado(mexido) == gerar_site.hash_aprovado(template)
+
+
+def test_parte_aprovada_tem_a_demo_e_nao_tem_a_secao():
+    aprovada = gerar_site.parte_aprovada(TEMPLATE.read_text(encoding="utf-8"))
+    assert "Veja o atendimento automático das cabanas em ação" in aprovada
+    assert "R$300 de implementação" in aprovada
+    assert ".cabanas-grid" not in aprovada
+    assert gerar_site.MARCADOR not in aprovada
+
+
 def test_template_tem_o_marcador():
     assert gerar_site.MARCADOR in TEMPLATE.read_text(encoding="utf-8")
