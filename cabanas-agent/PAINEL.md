@@ -125,14 +125,17 @@ como texto.
 
 ## Escalações
 
-> ⚠️ **O aviso de escalação por WhatsApp não funciona com a configuração
-> combinada.** `ESCALATION_NUMBER` é o mesmo número do atendimento, e a Cloud
-> API recusa mensagem de um número para ele mesmo. O agente detecta e nem
-> tenta enviar — a escalação fica registrada, mas **ninguém é avisado na hora**.
->
-> Enquanto isso não mudar, `/painel/escalacoes` é a única forma de ver quem
-> está esperando. Vale abrir todo dia. Ver o passo 6 do
+O aviso vai para a secretária (+55 54 98448-7198), que segue no WhatsApp
+normal. O sistema roda num chip próprio, então não há conflito de número.
+
+> ⚠️ **Enquanto o template não for aprovado, o aviso não chega.** A Cloud API
+> só entrega texto livre dentro de 24h da última mensagem que o destinatário
+> mandou para o sistema, e a secretária nunca escreve para o número do sistema.
+> Com `ESCALATION_TEMPLATE` configurado, entrega sempre — ver passo 6 do
 > [DEPLOY.md](DEPLOY.md).
+>
+> Até lá, **esta tela é a fonte** de quem está esperando. Vale abrir todo dia.
+> Quando o aviso falha, o log diz `Aviso de escalação NÃO entregue`.
 
 ## Auditoria
 

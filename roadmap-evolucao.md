@@ -25,15 +25,24 @@ telas de escalações e auditoria.
 
 **Total: 191 testes.**
 
-### 🔴 Bloqueia o lançamento
+### ✅ Resolvido pelo cliente
 
-1. **O aviso de escalação por WhatsApp não funciona.** `ESCALATION_NUMBER` é o
-   mesmo número do atendimento, e a Cloud API recusa mensagem de um número para
-   ele mesmo. Ninguém é avisado na hora. A tela `/painel/escalacoes` cobre o
-   buraco, mas exige alguém abrindo todo dia. Ver passo 6 do `DEPLOY.md`.
-2. **Migrar o número tira a secretária do WhatsApp Business.** É difícil de
-   desfazer e muda a rotina do clube. Confirmar com a Camily e o Adriano.
-3. **Prazo de retenção das conversas não definido** (LGPD).
+- **Número do sistema:** chip novo, exclusivo da Cloud API. Sem migração, a
+  secretária não perde o WhatsApp dela.
+- **Escalação:** vai para a secretária (5554984487198), número distinto do
+  sistema. O conflito de "mensagem para si mesmo" acabou.
+
+### 🟡 Não bloqueia, mas o aviso não chega até resolver
+
+- **Template de escalação.** A Cloud API só entrega texto livre dentro de 24h
+  da última mensagem do destinatário, e a secretária nunca escreve para o
+  sistema. Sem `ESCALATION_TEMPLATE` aprovado, o aviso é recusado (erro
+  131047) e a fonte passa a ser `/painel/escalacoes`. Suporte a template já
+  está no código; falta criar e aprovar na Meta. Passo 6 do `DEPLOY.md`.
+
+### 🔴 Continua aberto
+
+- **Prazo de retenção das conversas não definido** (LGPD).
 
 ---
 

@@ -24,16 +24,27 @@ O que **não** pode inverter:
 
 ---
 
-## ⚠️ Antes de começar: o número muda de dono
+## Os dois números
 
-`+55 54 98448-7198` é o número da secretária do clube. Migrar para a Cloud API
-**tira o número do aplicativo WhatsApp Business**. A secretária deixa de
-atender por ele no celular — dali em diante quem responde é o agente, e o
-histórico de conversas do aplicativo não vem junto.
+| Número | Papel |
+| --- | --- |
+| **chip novo** (a adquirir) | número do sistema, exclusivo da Cloud API |
+| **+55 54 98448-7198** | secretária, segue no WhatsApp normal, só recebe avisos |
 
-Isso é difícil de desfazer e afeta a operação do clube todo dia. Confirme com a
-Camily e com o Adriano **antes** do passo 5. Se a ideia era manter a secretária
-atendendo em paralelo, o caminho é outro número.
+O cliente decidiu comprar um chip novo para o sistema, então **não há migração
+de número em uso** — a secretária não perde o WhatsApp dela. Isso resolve o
+conflito que existia antes, quando os dois papéis estavam no mesmo número e a
+Cloud API recusava mensagem de um número para ele mesmo.
+
+> ⚠️ **Um limite continua de pé.** A Cloud API só entrega mensagem de texto
+> livre dentro de **24h** da última mensagem que aquele número mandou para o
+> sistema. A secretária não conversa com o número do sistema, então a janela
+> dela está sempre fechada e o aviso de escalação em texto livre é recusado
+> (erro `131047`).
+>
+> A saída é um **template aprovado** — ver passo 6. Sem ele, a escalação
+> continua sendo gravada e aparece em `/painel/escalacoes`, mas ninguém é
+> avisado na hora.
 
 ---
 
@@ -85,10 +96,10 @@ Guarde: o mesmo valor vai no Secret Manager (passo 7) e no formulário da Meta
 
 Em https://developers.facebook.com → seu app → **WhatsApp**.
 
-**5a. `WHATSAPP_PHONE_NUMBER_ID`**
-→ WhatsApp → **API Setup** → campo *Phone number ID*.
-São ~15 dígitos. **Não é o telefone** — preencher com `5554984487198` faz todo
-envio falhar com 400.
+**5a. `WHATSAPP_PHONE_NUMBER_ID`** (só depois do 5d)
+→ WhatsApp → **API Setup** → campo *Phone number ID*, com o chip novo
+selecionado. São ~15 dígitos. **Não é o telefone** — preencher com o número do
+chip faz todo envio falhar com 400.
 
 **5b. `WHATSAPP_APP_SECRET`**
 → Configurações do app → **Básico** → *Chave secreta do app* → **Mostrar**.
@@ -104,28 +115,59 @@ sai de um usuário do sistema:
    `whatsapp_business_messaging` e `whatsapp_business_management`
 5. Validade: **Nunca**. Copiar — só aparece uma vez.
 
-**5d. Migrar o número** (ver o aviso lá em cima antes de fazer)
-→ WhatsApp → **API Setup** → *Add phone number*, e seguir a verificação.
+**5d. Cadastrar o chip novo**
+→ WhatsApp → **API Setup** → *Add phone number*.
 
-## 6. Decidir o número de escalação
+O chip precisa estar num aparelho para receber o código de verificação (SMS ou
+chamada) **uma vez**. Depois disso ele não é mais usado no celular — nem
+precisa ficar num aparelho.
 
-> ⚠️ **Hoje `ESCALATION_NUMBER` é o mesmo número do atendimento, e isso não
-> funciona.** A Cloud API recusa mensagem de um número para ele mesmo, então o
-> aviso "esta conversa precisa de humano" nunca chega.
->
-> O agente detecta isso e nem tenta enviar — a escalação fica registrada e
-> aparece em `/painel/escalacoes`. Nada se perde, mas **ninguém é avisado na
-> hora**.
->
-> Para o aviso funcionar, `ESCALATION_NUMBER` precisa ser **outro** número (o
-> celular pessoal da Camily, por exemplo). E ainda assim há um segundo limite:
-> a Cloud API só entrega mensagem livre dentro de 24h da última mensagem que
-> aquele número mandou para o negócio. Fora dessa janela é preciso um
-> *template* aprovado pela Meta (leva alguns dias). Enquanto não houver
-> template, a Camily precisa mandar um "oi" para o número do agente de vez em
-> quando para manter a janela aberta — ou usar a tela de escalações como fonte.
+Não instale o WhatsApp comum nem o WhatsApp Business nesse chip: um número não
+pode estar nos dois mundos ao mesmo tempo, e instalar depois tira o número da
+Cloud API.
 
-Decida antes do passo 7; é uma variável de ambiente.
+Só quando o cadastro terminar você tem o *Phone number ID* do passo 5a.
+
+## 6. Template do aviso de escalação
+
+`ESCALATION_NUMBER=5554984487198` já está definido — a secretária. O que falta
+é fazer o aviso **chegar** nela.
+
+Sem template, o agente manda texto livre, e a Meta recusa porque a janela de
+24h dela está fechada. Com template, entrega sempre.
+
+**Criar o template** (App → WhatsApp → *Modelos de mensagem* → Criar):
+
+| Campo | Valor |
+| --- | --- |
+| Nome | `escalacao_cabanas` |
+| Categoria | **Utilidade** (não Marketing) |
+| Idioma | Português (BR) |
+
+Corpo, exatamente com três variáveis:
+
+```
+Atendimento das cabanas precisa de você ({{1}}).
+
+Cliente: {{2}}
+Mensagem: "{{3}}"
+```
+
+O agente preenche `{{1}}` com o motivo, `{{2}}` com o telefone do cliente e
+`{{3}}` com a mensagem (cortada em 200 caracteres). A aprovação da Meta leva de
+minutos a alguns dias; categoria **Utilidade** costuma passar mais rápido que
+Marketing.
+
+Depois de aprovado, no deploy:
+
+```
+ESCALATION_TEMPLATE=escalacao_cabanas
+ESCALATION_TEMPLATE_IDIOMA=pt_BR
+```
+
+**Dá para subir sem o template.** O sistema funciona; só o aviso instantâneo
+não chega, e a Camily acompanha por `/painel/escalacoes`. Quando o template for
+aprovado, é só acrescentar a variável e reiniciar — sem mexer em código.
 
 ## 7. Guardar os segredos
 
@@ -173,7 +215,7 @@ gcloud run deploy cabanas-agent \
   --source . \
   --region=$REGION \
   --allow-unauthenticated \
-  --set-env-vars="^|^GCP_PROJECT_ID=$PROJECT|FIRESTORE_COLLECTION=cabanas_leads|NICHO=cabanas|NICHOS_PAINEL=cabanas|COOKIE_SEGURO=1|COMISSAO_PERCENTUAL=10|CABANAS=1,2,3,4,5|WHATSAPP_PHONE_NUMBER_ID=COLE_AQUI|WHATSAPP_PHONE_NUMBER=+55 54 98448-7198|ESCALATION_NUMBER=DECIDIDO_NO_PASSO_6" \
+  --set-env-vars="^|^GCP_PROJECT_ID=$PROJECT|FIRESTORE_COLLECTION=cabanas_leads|NICHO=cabanas|NICHOS_PAINEL=cabanas|COOKIE_SEGURO=1|COMISSAO_PERCENTUAL=10|CABANAS=1,2,3,4,5|WHATSAPP_PHONE_NUMBER_ID=COLE_AQUI|WHATSAPP_PHONE_NUMBER=NUMERO_DO_CHIP_NOVO|ESCALATION_NUMBER=5554984487198|ESCALATION_TEMPLATE=" \
   --set-secrets="GEMINI_API_KEY=GEMINI_API_KEY:latest,WHATSAPP_TOKEN=WHATSAPP_TOKEN:latest,WHATSAPP_VERIFY_TOKEN=WHATSAPP_VERIFY_TOKEN:latest,WHATSAPP_APP_SECRET=WHATSAPP_APP_SECRET:latest"
 ```
 
@@ -201,6 +243,9 @@ Precisa vir:
 - `"config_faltando": []`
 - `"cabanas_sem_link": []`
 - `"cabanas": ["1","2","3","4","5"]`
+- `"aviso_escalacao_por_whatsapp": "ok"` — se vier `"quebrado"`, alguém pôs o
+  mesmo número nos dois papéis
+- `"numero_atendimento"` mostrando o **chip novo**, não o da secretária
 
 Se `config_faltando` não estiver vazio, **pare aqui** — o webhook vai falhar.
 
@@ -236,7 +281,7 @@ De um celular que **não** seja o do agente:
 | --- | --- |
 | "Quanto custa a diária?" | responde R$150,00 e manda link |
 | "Tem vaga dia 12? Somos 4" | responde + vira **lead quente** no painel |
-| "Faz desconto?" | resposta de escalação, aparece em `/painel/escalacoes` |
+| "Faz desconto?" | resposta de escalação, aparece em `/painel/escalacoes` — e chega na secretária, se o template já estiver aprovado |
 | áudio | pede para escrever em texto |
 
 Depois: `/painel/` mostra as conversas, e `/painel/fechamento` lista os leads.
@@ -249,8 +294,15 @@ Acompanhe:
 gcloud run services logs read cabanas-agent --region=$REGION --limit=50
 ```
 
-Procure por: erro de envio da Meta (token errado), `GeminiIndisponivel`
-(timeout ou cota), e `Assinatura inválida` (app secret errado).
+Procure por:
+
+| No log | O que é |
+| --- | --- |
+| `janela de 24h está fechada` | aviso de escalação recusado — falta o template do passo 6 |
+| `Aviso de escalação NÃO entregue` | ninguém foi avisado; veja `/painel/escalacoes` |
+| `GeminiIndisponivel` | timeout ou cota do modelo — o cliente recebeu o fallback |
+| `Assinatura inválida` | `WHATSAPP_APP_SECRET` errado |
+| `Meta recusou envio` com código 190 | token expirado — usou o temporário de 24h? |
 
 ---
 
@@ -259,7 +311,8 @@ Procure por: erro de envio da Meta (token errado), `GeminiIndisponivel`
 - [ ] Subir as fotos em `assets/cabanas/` e rodar `scripts/gerar_site.py`
 - [ ] GitHub Pages: Settings → Pages → branch `main` / root
 - [ ] **Definir o prazo de retenção das conversas** (LGPD)
-- [ ] Resolver o número de escalação (passo 6)
+- [ ] Aprovar o template `escalacao_cabanas` e ligar `ESCALATION_TEMPLATE`
+      (até lá, `/painel/escalacoes` é a fonte)
 - [ ] Definir com o Adriano quem paga a infraestrutura
 
 ## Custo esperado

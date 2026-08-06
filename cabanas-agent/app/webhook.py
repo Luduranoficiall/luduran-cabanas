@@ -248,12 +248,33 @@ async def _avisar_equipe(
             motivo,
         )
         return
-    aviso = (
-        f"🔔 Atendimento precisa de você ({motivo})\n\n"
-        f"Cliente: +{telefone}\n"
-        f'Mensagem: "{texto}"'
-    )
-    await whatsapp.enviar_texto(cfg.escalation_number, aviso)
+    if cfg.escalation_template:
+        # Caminho que funciona fora da janela de 24h. Os parâmetros preenchem
+        # {{1}} motivo, {{2}} telefone do cliente, {{3}} mensagem.
+        entregue = await whatsapp.enviar_template(
+            cfg.escalation_number,
+            cfg.escalation_template,
+            cfg.escalation_template_idioma,
+            [motivo, f"+{telefone}", texto[:200]],
+        )
+    else:
+        aviso = (
+            f"🔔 Atendimento precisa de você ({motivo})\n\n"
+            f"Cliente: +{telefone}\n"
+            f'Mensagem: "{texto}"'
+        )
+        entregue = await whatsapp.enviar_texto(cfg.escalation_number, aviso)
+
+    if not entregue:
+        # O aviso não chegou a ninguém. A escalação continua gravada e
+        # aparece no painel — é o que evita perder o cliente.
+        logger.error(
+            "Aviso de escalação NÃO entregue para %s. A conversa com %s "
+            "(motivo: %s) só será vista em /painel/escalacoes.",
+            cfg.escalation_number,
+            telefone,
+            motivo,
+        )
 
 
 @router.get("/webhook")

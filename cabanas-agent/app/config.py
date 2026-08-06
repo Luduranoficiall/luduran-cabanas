@@ -117,6 +117,21 @@ class Settings:
     # Número que recebe o aviso quando uma conversa é escalada para humano.
     # Formato internacional, só dígitos (ex.: 5548999998888).
     escalation_number: str = field(default_factory=lambda: _env("ESCALATION_NUMBER"))
+    # Nome de um template aprovado na Meta para o aviso de escalação.
+    #
+    # Por que isso existe: a Cloud API só entrega mensagem de texto livre
+    # dentro de 24h da última mensagem que aquele número mandou para o
+    # negócio. A secretária não conversa com o número do sistema, então a
+    # janela dela está sempre fechada e o aviso em texto livre é recusado
+    # (erro 131047). Template é a única forma de entregar fora da janela.
+    #
+    # Vazio = tenta texto livre, que só funciona se a janela estiver aberta.
+    escalation_template: str = field(
+        default_factory=lambda: _env("ESCALATION_TEMPLATE")
+    )
+    escalation_template_idioma: str = field(
+        default_factory=lambda: _env("ESCALATION_TEMPLATE_IDIOMA", "pt_BR")
+    )
 
     diaria: str = "R$150,00"
     cabanas: dict[str, str] = field(default_factory=_cabanas_from_env)
