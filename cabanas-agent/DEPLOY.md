@@ -28,7 +28,7 @@ O que **não** pode inverter:
 
 | Número | Papel |
 | --- | --- |
-| **chip novo** (a adquirir) | número do sistema, exclusivo da Cloud API |
+| **+55 54 99910-3545** (Vivo, chip novo) | número do sistema, exclusivo da Cloud API |
 | **+55 54 98448-7198** | secretária, segue no WhatsApp normal, só recebe avisos |
 
 O cliente decidiu comprar um chip novo para o sistema, então **não há migração
@@ -45,6 +45,20 @@ Cloud API recusava mensagem de um número para ele mesmo.
 > A saída é um **template aprovado** — ver passo 6. Sem ele, a escalação
 > continua sendo gravada e aparece em `/painel/escalacoes`, mas ninguém é
 > avisado na hora.
+
+---
+
+## As quatro credenciais, e de onde vem cada uma
+
+| Variável | Onde | Passo |
+| --- | --- | --- |
+| `GEMINI_API_KEY` | aistudio.google.com/apikey | 3 |
+| `WHATSAPP_VERIFY_TOKEN` | você inventa (`openssl rand -hex 24`) | 4 |
+| `WHATSAPP_PHONE_NUMBER_ID` | Meta → WhatsApp → Configuração da API | 5c |
+| `WHATSAPP_APP_SECRET` | Meta → Configurações do app → Básico | 5d |
+| `WHATSAPP_TOKEN` | Meta → business.facebook.com → usuário do sistema | 5e |
+
+Os passos 1 a 4 não dependem da Meta — dá para adiantar agora.
 
 ---
 
@@ -94,39 +108,95 @@ Guarde: o mesmo valor vai no Secret Manager (passo 7) e no formulário da Meta
 
 ## 5. Meta: app, número e credenciais
 
-Em https://developers.facebook.com → seu app → **WhatsApp**.
+Tudo em https://developers.facebook.com. **A ordem aqui importa**: o
+*Phone number ID* só existe depois que o chip estiver cadastrado, então o
+cadastro vem primeiro.
 
-**5a. `WHATSAPP_PHONE_NUMBER_ID`** (só depois do 5d)
-→ WhatsApp → **API Setup** → campo *Phone number ID*, com o chip novo
-selecionado. São ~15 dígitos. **Não é o telefone** — preencher com o número do
-chip faz todo envio falhar com 400.
+Número do sistema: **+55 54 99910-3545** (Vivo, sem WhatsApp instalado).
 
-**5b. `WHATSAPP_APP_SECRET`**
-→ Configurações do app → **Básico** → *Chave secreta do app* → **Mostrar**.
+### 5a. Criar o app e a conta do WhatsApp Business
 
-**5c. `WHATSAPP_TOKEN` permanente**
-O token da tela de API Setup **expira em 24 horas** e não serve. O permanente
-sai de um usuário do sistema:
+1. **Meus apps → Criar app** → tipo **Empresa**
+2. No painel do app, **Adicionar produto → WhatsApp → Configurar**
+3. Ele pede uma **conta do WhatsApp Business (WABA)** — crie uma nova se não
+   houver
+
+### 5b. Cadastrar o chip  ← faça isto antes de procurar o Phone number ID
+
+→ WhatsApp → **Configuração da API** → *Adicionar número de telefone*
+
+- Nome de exibição: o que o cliente vê no WhatsApp (ex.: "Cabanas 1992"). A
+  Meta revisa esse nome; evite promessa ou palavra de promoção.
+- Fuso: **GMT-03:00 Brasília**
+- Número: **+55 54 99910-3545**
+
+**O código de verificação:**
+
+- Escolha **SMS** ou **Chamada de voz**. O chip precisa estar num aparelho
+  ligado, com sinal, **nesse momento**.
+- O código chega em segundos e vale poucos minutos. Se não chegar, espere o
+  contador zerar e peça de novo — pedir várias vezes seguidas trava
+  temporariamente.
+- Se a Vivo tiver bloqueio de SMS curto no chip novo (acontece em chip
+  pré-pago recém-ativado), use a opção de **chamada de voz**.
+- Depois da verificação o chip **não é mais necessário no aparelho**. Guarde-o
+  de qualquer forma: se um dia precisar recadastrar, o código vai para ele.
+
+> ⚠️ **Não instale WhatsApp nem WhatsApp Business nesse chip, nunca.** Um
+> número não pode estar nos dois mundos: instalar depois derruba o número da
+> Cloud API e o agente para de receber mensagem.
+
+### 5c. `WHATSAPP_PHONE_NUMBER_ID`
+
+Agora ele existe. → WhatsApp → **Configuração da API**, selecione
+**+55 54 99910-3545** no seletor *De*, e copie o **ID do número de telefone**
+logo abaixo.
+
+São ~15 dígitos e **não têm relação com o telefone**. Preencher com
+`5554999103545` faz todo envio falhar com 400.
+
+Copie também o **ID da conta do WhatsApp Business** — não é usado pelo agente,
+mas ajuda no suporte.
+
+### 5d. `WHATSAPP_APP_SECRET`
+
+→ **Configurações do app → Básico** → *Chave secreta do app* → **Mostrar**
+(pede sua senha do Facebook).
+
+### 5e. `WHATSAPP_TOKEN` permanente
+
+O token que aparece na tela de Configuração da API **expira em 24 horas** e não
+serve para produção. O permanente sai de um usuário do sistema:
 
 1. https://business.facebook.com → **Configurações do negócio**
-2. **Usuários → Usuários do sistema** → *Adicionar* (função: Administrador)
-3. **Adicionar ativos** → o app do WhatsApp, com controle total
-4. **Gerar novo token** → escolher o app → marcar as permissões
+2. **Usuários → Usuários do sistema** → *Adicionar*
+   - Nome: `agente-cabanas`
+   - Função: **Administrador**
+3. Selecione o usuário criado → **Adicionar ativos** → aba **Apps** → marque o
+   app → **Controle total**
+4. **Gerar novo token** → escolha o app → validade **Nunca** → marque
    `whatsapp_business_messaging` e `whatsapp_business_management`
-5. Validade: **Nunca**. Copiar — só aparece uma vez.
+5. Copie. **Só aparece uma vez** — se perder, gere outro.
 
-**5d. Cadastrar o chip novo**
-→ WhatsApp → **API Setup** → *Add phone number*.
+> Se o passo 3 não listar o app, o usuário do sistema foi criado em outro
+> negócio. Confira se o app e o usuário estão sob a mesma conta comercial.
 
-O chip precisa estar num aparelho para receber o código de verificação (SMS ou
-chamada) **uma vez**. Depois disso ele não é mais usado no celular — nem
-precisa ficar num aparelho.
+### 5f. Tirar o app do modo de desenvolvimento
 
-Não instale o WhatsApp comum nem o WhatsApp Business nesse chip: um número não
-pode estar nos dois mundos ao mesmo tempo, e instalar depois tira o número da
-Cloud API.
+Enquanto o app está em **Desenvolvimento**, ele só troca mensagem com números
+cadastrados como destinatários de teste. Um cliente qualquer mandando mensagem
+**não recebe resposta** — e isso não aparece como erro, o webhook simplesmente
+não chega.
 
-Só quando o cadastro terminar você tem o *Phone number ID* do passo 5a.
+→ No topo do painel do app, mude de **Desenvolvimento** para **Ativo**.
+
+Para testar antes disso, adicione o seu próprio celular em
+**Configuração da API → Para → Gerenciar lista de números**.
+
+> **Limite inicial:** com o negócio ainda não verificado, a Meta libera
+> conversas com até **250 números diferentes por 24h**. Sobra folga para esta
+> operação. Se um dia apertar, o caminho é a **verificação do negócio**
+> (Configurações do negócio → Central de segurança), que pede CNPJ e comprovante.
 
 ## 6. Template do aviso de escalação
 
@@ -215,7 +285,7 @@ gcloud run deploy cabanas-agent \
   --source . \
   --region=$REGION \
   --allow-unauthenticated \
-  --set-env-vars="^|^GCP_PROJECT_ID=$PROJECT|FIRESTORE_COLLECTION=cabanas_leads|NICHO=cabanas|NICHOS_PAINEL=cabanas|COOKIE_SEGURO=1|COMISSAO_PERCENTUAL=10|CABANAS=1,2,3,4,5|WHATSAPP_PHONE_NUMBER_ID=COLE_AQUI|WHATSAPP_PHONE_NUMBER=NUMERO_DO_CHIP_NOVO|ESCALATION_NUMBER=5554984487198|ESCALATION_TEMPLATE=" \
+  --set-env-vars="^|^GCP_PROJECT_ID=$PROJECT|FIRESTORE_COLLECTION=cabanas_leads|NICHO=cabanas|NICHOS_PAINEL=cabanas|COOKIE_SEGURO=1|COMISSAO_PERCENTUAL=10|CABANAS=1,2,3,4,5|WHATSAPP_PHONE_NUMBER_ID=COLE_AQUI|WHATSAPP_PHONE_NUMBER=+55 54 99910-3545|ESCALATION_NUMBER=5554984487198|ESCALATION_TEMPLATE=" \
   --set-secrets="GEMINI_API_KEY=GEMINI_API_KEY:latest,WHATSAPP_TOKEN=WHATSAPP_TOKEN:latest,WHATSAPP_VERIFY_TOKEN=WHATSAPP_VERIFY_TOKEN:latest,WHATSAPP_APP_SECRET=WHATSAPP_APP_SECRET:latest"
 ```
 
@@ -245,7 +315,7 @@ Precisa vir:
 - `"cabanas": ["1","2","3","4","5"]`
 - `"aviso_escalacao_por_whatsapp": "ok"` — se vier `"quebrado"`, alguém pôs o
   mesmo número nos dois papéis
-- `"numero_atendimento"` mostrando o **chip novo**, não o da secretária
+- `"numero_atendimento": "+55 54 99910-3545"` — o chip, não o da secretária
 
 Se `config_faltando` não estiver vazio, **pare aqui** — o webhook vai falhar.
 
