@@ -106,8 +106,9 @@ cat <<FIM
   Esquecer de assinar 'messages' é o erro mais comum: a URL fica salva, a
   verificação passa, e nenhuma mensagem chega.
 
-  Depois, crie os usuários do painel:
+  Depois, crie os usuários do painel (a primeira linha só na primeira vez):
 
+    pip install -q -r requirements.txt
     python scripts/criar_usuario.py lucas@luduran.com   --papel admin
     python scripts/criar_usuario.py camily@exemplo.com  --papel operador --nichos cabanas
     python scripts/criar_usuario.py adriano@exemplo.com --papel leitor   --nichos cabanas

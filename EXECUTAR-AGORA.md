@@ -3,20 +3,32 @@
 Folha única para colocar no ar hoje. O detalhe de cada passo está em
 [`cabanas-agent/DEPLOY.md`](cabanas-agent/DEPLOY.md); aqui é a sequência.
 
-**Estado:** código pronto e consolidado na `main`, 238 testes passando. O que
+**Estado:** código pronto e consolidado na `main`, 239 testes passando. O que
 falta são credenciais — nenhuma delas eu consigo gerar por você.
 
-## O caminho curto — dois comandos
+## O caminho curto — sem instalar nada
 
-Tudo que está descrito abaixo em blocos foi empacotado em dois scripts que
-conferem cada etapa sozinhos e param no primeiro erro, dizendo o que fazer.
+Não precisa instalar o `gcloud` nem autenticar: o **Cloud Shell** é um terminal
+dentro do navegador, já logado na sua conta Google, com `gcloud`, `git` e
+`python` prontos. É a forma mais rápida de sair do zero.
+
+1. Abra **https://shell.cloud.google.com** e entre com a conta dona do projeto
+2. Cole:
 
 ```bash
-cd cabanas-agent
+git clone https://github.com/Luduranoficiall/luduran-cabanas.git
+cd luduran-cabanas/cabanas-agent
 
 bash scripts/gcp_setup.sh              # tudo que NÃO depende da Meta
 bash scripts/deploy.sh SEU_PHONE_ID    # depois que a Meta liberar
 ```
+
+Se preferir a sua própria máquina, os mesmos dois comandos valem — só exigem
+[o `gcloud` instalado](https://cloud.google.com/sdk/docs/install) e um
+`gcloud auth login` antes.
+
+Os dois scripts conferem cada etapa sozinhos e param no primeiro erro dizendo
+o que fazer.
 
 O primeiro liga as APIs, cria o Firestore, dá as permissões, cria os índices,
 gera o verify token, cria os quatro cofres e valida a chave do Gemini na
@@ -29,8 +41,6 @@ o que colar no formulário da Meta.
 O resto deste arquivo é a mesma coisa passo a passo, para quando você quiser
 ver o que está acontecendo — ou consertar algo no meio.
 [`PRE-META.md`](PRE-META.md) tem a versão com uma verificação por etapa.
-
----
 
 ---
 
@@ -145,6 +155,7 @@ mensagem chega.
 ## Bloco F — Usuários e teste real · ~10 min
 
 ```bash
+pip install -q -r requirements.txt      # só na primeira vez
 python scripts/criar_usuario.py lucas@luduran.com   --papel admin
 python scripts/criar_usuario.py camily@exemplo.com  --papel operador --nichos cabanas
 python scripts/criar_usuario.py adriano@exemplo.com --papel leitor   --nichos cabanas
@@ -170,7 +181,7 @@ Depois abra `/painel/` e confira que as conversas apareceram.
 | Template `escalacao_cabanas` | sistema funciona; a Camily acompanha por `/painel/escalacoes` |
 | `RETENCAO_DIAS` | mecanismo pronto; falta você definir o prazo |
 | Fotos das cabanas | cartão mostra "foto em breve" |
-| GitHub Pages | a demo já roda local |
+| GitHub Pages | as páginas já abrem como arquivo |
 | Decisão do CRM | melhor com dado real na mesa |
 
 ## Se algo falhar
