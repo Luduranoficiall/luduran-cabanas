@@ -6,9 +6,31 @@ Folha única para colocar no ar hoje. O detalhe de cada passo está em
 **Estado:** código pronto e consolidado na `main`, 238 testes passando. O que
 falta são credenciais — nenhuma delas eu consigo gerar por você.
 
-> Quer adiantar tudo que **não depende da Meta**, com um comando de verificação
-> por etapa? [`PRE-META.md`](PRE-META.md). Esta folha aqui é a versão corrida;
-> a de lá confere cada passo antes de seguir.
+## O caminho curto — dois comandos
+
+Tudo que está descrito abaixo em blocos foi empacotado em dois scripts que
+conferem cada etapa sozinhos e param no primeiro erro, dizendo o que fazer.
+
+```bash
+cd cabanas-agent
+
+bash scripts/gcp_setup.sh              # tudo que NÃO depende da Meta
+bash scripts/deploy.sh SEU_PHONE_ID    # depois que a Meta liberar
+```
+
+O primeiro liga as APIs, cria o Firestore, dá as permissões, cria os índices,
+gera o verify token, cria os quatro cofres e valida a chave do Gemini na
+Google antes de guardá-la. Rodar de novo é seguro: o que já passou não refaz.
+
+O segundo confere os segredos **antes** de gastar um build de 3 minutos, sobe o
+serviço, valida o `/health`, simula o handshake do webhook e imprime exatamente
+o que colar no formulário da Meta.
+
+O resto deste arquivo é a mesma coisa passo a passo, para quando você quiser
+ver o que está acontecendo — ou consertar algo no meio.
+[`PRE-META.md`](PRE-META.md) tem a versão com uma verificação por etapa.
+
+---
 
 ---
 

@@ -123,10 +123,20 @@ trava da demo aprovada e a anonimização por retenção. Nenhum deles usa rede.
 
 ## Deploy no Cloud Run
 
-**Para colocar no ar hoje:** [EXECUTAR-AGORA.md](../EXECUTAR-AGORA.md) — a
-sequência em blocos. **Para adiantar hoje o que não depende da Meta**, com uma
-verificação por etapa: [PRE-META.md](../PRE-META.md). O detalhe de cada passo
-está no **[DEPLOY.md](DEPLOY.md)**.
+**Dois comandos:**
+
+```bash
+bash scripts/gcp_setup.sh              # tudo que NÃO depende da Meta
+bash scripts/deploy.sh SEU_PHONE_ID    # depois que a Meta liberar
+```
+
+Os dois conferem cada etapa e param no primeiro erro dizendo o que fazer — um
+erro de permissão que só aparecesse no log do Cloud Run custa meia hora
+procurando no lugar errado. Rodar de novo é seguro.
+
+O passo a passo por trás deles está em [EXECUTAR-AGORA.md](../EXECUTAR-AGORA.md)
+(sequência em blocos), [PRE-META.md](../PRE-META.md) (uma verificação por
+etapa) e **[DEPLOY.md](DEPLOY.md)** (o detalhe de cada passo).
 
 Antes de gastar um deploy, confira as credenciais em 10 segundos:
 

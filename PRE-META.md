@@ -6,6 +6,11 @@ verificação passar — assim nenhum erro aparece só lá no final.
 Nada aqui depende da Meta. Quando você tiver as credenciais dela, faltam
 apenas dois comandos (etapa 7).
 
+> **Com pressa?** As etapas 1 a 7 estão empacotadas em
+> `bash cabanas-agent/scripts/gcp_setup.sh` — ele faz e confere cada uma, e
+> para no primeiro erro dizendo o que fazer. O passo a passo abaixo continua
+> valendo para entender o que ele fez, ou para consertar algo no meio.
+
 ```bash
 export PROJECT=serious-trainer-465716-j9
 export REGION=us-central1
