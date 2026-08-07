@@ -6,6 +6,10 @@ Folha única para colocar no ar hoje. O detalhe de cada passo está em
 **Estado:** código pronto e consolidado na `main`, 238 testes passando. O que
 falta são credenciais — nenhuma delas eu consigo gerar por você.
 
+> Quer adiantar tudo que **não depende da Meta**, com um comando de verificação
+> por etapa? [`PRE-META.md`](PRE-META.md). Esta folha aqui é a versão corrida;
+> a de lá confere cada passo antes de seguir.
+
 ---
 
 ## Bloco A — GCP (faça agora, não depende de ninguém) · ~15 min

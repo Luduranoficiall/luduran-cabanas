@@ -124,8 +124,9 @@ trava da demo aprovada e a anonimização por retenção. Nenhum deles usa rede.
 ## Deploy no Cloud Run
 
 **Para colocar no ar hoje:** [EXECUTAR-AGORA.md](../EXECUTAR-AGORA.md) — a
-sequência em blocos. O detalhe de cada passo está no
-**[DEPLOY.md](DEPLOY.md)**.
+sequência em blocos. **Para adiantar hoje o que não depende da Meta**, com uma
+verificação por etapa: [PRE-META.md](../PRE-META.md). O detalhe de cada passo
+está no **[DEPLOY.md](DEPLOY.md)**.
 
 Antes de gastar um deploy, confira as credenciais em 10 segundos:
 
