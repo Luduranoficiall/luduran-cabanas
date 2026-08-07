@@ -83,7 +83,9 @@
     {% endif %}
   </nav>
   <div class="topo-dir">
-    <span>{{ usuario.email }}{% if usuario.eh_admin %} · admin{% else %} · leitura{% endif %}</span>
+    {# Três papéis, três rótulos. Chamar a operadora de "leitura" fazia a
+       Camily concluir que não podia fazer justamente o trabalho dela. #}
+    <span>{{ usuario.email }} · {{ usuario.papel }}</span>
     <form method="post" action="/painel/logout"><button class="sair">Sair</button></form>
   </div>
 </header>

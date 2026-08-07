@@ -456,3 +456,24 @@ def test_csv_usa_virgula_decimal_para_o_excel_somar(cliente):
     texto = cliente.get("/painel/fechamento.csv?nicho=cabanas&ano=2026&mes=3").text
     assert "1234,56" in texto
     assert "R$" not in texto  # com "R$" o Excel trata a coluna como texto
+
+
+def test_cabecalho_nomeia_o_papel_de_cada_um(cliente):
+    """A Camily é operadora, não "leitura".
+
+    O cabeçalho dizia "leitura" para todo mundo que não fosse admin. Ela abria
+    o fechamento, lia que seu acesso era só de leitura, e concluía que não
+    podia fazer exatamente o trabalho dela — enquanto o botão de salvar estava
+    ali do lado, funcionando.
+    """
+    entrar(cliente, "camily@exemplo.com", SENHA_CAMILY)
+    r = cliente.get("/painel/fechamento?nicho=cabanas&ano=2026&mes=3")
+    assert "camily@exemplo.com · operador" in r.text
+    assert "· leitura" not in r.text
+
+    cliente.post("/painel/logout")
+    entrar(cliente, "adriano@exemplo.com", SENHA_ADRIANO)
+    r = cliente.get("/painel/fechamento?nicho=cabanas&ano=2026&mes=3")
+    assert "adriano@exemplo.com · leitor" in r.text
+    # Ele continua sem poder editar o que audita.
+    assert "Salvar conferência" not in r.text
