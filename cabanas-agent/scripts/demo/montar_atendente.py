@@ -28,6 +28,62 @@ TELAS = {n: tela_b64(n) for n in ("login", "painel", "fechamento", "escalacoes")
 
 LINKS = {str(n): f"https://airbnb.com.br/h/1992cabana{n}" for n in range(1, 6)}
 
+# As fotos entram embutidas quando existem. Enquanto não existem, o cartão
+# mostra "foto em breve" — mostrar um marcador cinza é honesto; inventar uma
+# imagem de cabana que não é a do Adriano seria pior do que não ter nenhuma.
+ASSETS = pathlib.Path("/home/user/luduran-cabanas/assets/cabanas")
+
+
+def foto(n: str) -> str | None:
+    pasta = ASSETS / f"cabana{n}"
+    if not pasta.is_dir():
+        return None
+    imagens = sorted(
+        x for x in pasta.iterdir()
+        if x.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp")
+    )
+    if not imagens:
+        return None
+    tipo = "png" if imagens[0].suffix.lower() == ".png" else "jpeg"
+    return f"data:image/{tipo};base64," + base64.b64encode(imagens[0].read_bytes()).decode()
+
+
+def cartao_cabana(n: str) -> str:
+    img = foto(n)
+    visual = (
+        f'<img src="{img}" alt="Cabana {n}" loading="lazy">'
+        if img else
+        '<div class="sem-foto"><span>foto em breve</span></div>'
+    )
+    return f'''
+    <a class="cabana" href="{LINKS[n]}" target="_blank" rel="noopener">
+      <div class="visual">{visual}</div>
+      <div class="corpo">
+        <span class="nome">Cabana {n}</span>
+        <span class="preco">R$ 150,00 <span>a diária</span></span>
+        <span class="cta">Ver fotos e reservar no Airbnb →</span>
+      </div>
+    </a>'''
+
+
+CATALOGO = "".join(cartao_cabana(str(n)) for n in range(1, 6))
+COM_FOTO = sum(1 for n in range(1, 6) if foto(str(n)))
+SEM_FOTO = [str(n) for n in range(1, 6) if not foto(str(n))]
+
+AVISO_FOTOS = (
+    '<p class="nota"><b>As fotos ainda não estão aqui.</b> Os cartões acima '
+    "mostram “foto em breve” de propósito — colocar uma imagem que não é a "
+    "cabana do Adriano seria pior do que não ter nenhuma. Assim que as fotos "
+    "entrarem na pasta, elas aparecem aqui automaticamente. Enquanto isso, "
+    "o hóspede vê as fotos de verdade no próprio Airbnb, que é para onde o "
+    "link leva.</p>"
+    if SEM_FOTO == [str(n) for n in range(1, 6)] else
+    f'<p class="nota"><b>Faltam as fotos da(s) cabana(s) {", ".join(SEM_FOTO)}.</b> '
+    "Os outros cartões já mostram a foto real. Quem estiver sem foto continua "
+    "com o link funcionando — o hóspede vê as imagens no Airbnb.</p>"
+    if SEM_FOTO else ""
+)
+
 SUGESTOES = [
     ("Quanto custa a diária?", "preço"),
     ("Tem vaga pro dia 12? Somos 4 pessoas", "disponibilidade"),
@@ -192,6 +248,22 @@ td input[type=checkbox] {{ width:17px; height:17px; accent-color:var(--amber); }
 .btn:hover {{ filter:brightness(1.08); }}
 #aviso-valor {{ color:var(--escala); font-size:13px; }}
 
+.catalogo {{ display:grid; grid-template-columns:repeat(auto-fill,minmax(215px,1fr)); gap:16px; }}
+.cabana {{ display:flex; flex-direction:column; text-decoration:none; color:inherit;
+  border:1px solid var(--rule); border-radius:12px; overflow:hidden;
+  background:var(--surface); box-shadow:var(--sombra); transition:border-color .15s; }}
+.cabana:hover {{ border-color:var(--amber); }}
+.cabana .visual {{ aspect-ratio:4/3; background:var(--amber-fraco); }}
+.cabana .visual img {{ width:100%; height:100%; object-fit:cover; display:block; }}
+.sem-foto {{ width:100%; height:100%; display:grid; place-items:center; }}
+.sem-foto span {{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600;
+  letter-spacing:.11em; text-transform:uppercase; color:var(--muted); }}
+.cabana .corpo {{ padding:13px 15px; display:flex; flex-direction:column; gap:3px; }}
+.cabana .nome {{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:16px; }}
+.cabana .preco {{ font-size:14px; font-variant-numeric:tabular-nums; }}
+.cabana .preco span {{ color:var(--muted); font-size:12.5px; }}
+.cabana .cta {{ margin-top:6px; color:var(--amber); font-size:12.5px; font-weight:600; }}
+
 .nota {{ border-left:2px solid var(--amber); padding:2px 0 2px 18px;
   color:var(--muted); max-width:66ch; }}
 .nota b {{ color:var(--ink); }}
@@ -275,7 +347,19 @@ footer {{ margin-top:60px; padding-top:24px; border-top:1px solid var(--rule);
 
 <section>
   <div class="cabeca">
-    <span class="rotulo">2 · No fechamento</span>
+    <span class="rotulo">2 · As cabanas</span>
+    <h2>O que ele manda para o hóspede</h2>
+  </div>
+  <p class="intro">São estes os cinco anúncios que o atendente envia. Clique em
+  qualquer um: abre o Airbnb, com as datas livres e o botão de reservar. É o
+  mesmo link que chega no WhatsApp.</p>
+  <div class="catalogo">{CATALOGO}</div>
+  {AVISO_FOTOS}
+</section>
+
+<section>
+  <div class="cabeca">
+    <span class="rotulo">3 · No fechamento</span>
     <h2>Quem demonstrou intenção de reservar</h2>
   </div>
   <p class="intro">Cada conversa acima com intenção real de reserva cai nesta
@@ -316,7 +400,7 @@ footer {{ margin-top:60px; padding-top:24px; border-top:1px solid var(--rule);
 
 <section>
   <div class="cabeca">
-    <span class="rotulo">3 · O painel completo</span>
+    <span class="rotulo">4 · O painel completo</span>
     <h2>As telas que a Camily e o Adriano usam</h2>
   </div>
   <div class="abas" role="tablist">

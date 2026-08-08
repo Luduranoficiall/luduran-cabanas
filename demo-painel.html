@@ -227,6 +227,22 @@ td input[type=checkbox] { width:17px; height:17px; accent-color:var(--amber); }
 .btn:hover { filter:brightness(1.08); }
 #aviso-valor { color:var(--escala); font-size:13px; }
 
+.catalogo { display:grid; grid-template-columns:repeat(auto-fill,minmax(215px,1fr)); gap:16px; }
+.cabana { display:flex; flex-direction:column; text-decoration:none; color:inherit;
+  border:1px solid var(--rule); border-radius:12px; overflow:hidden;
+  background:var(--surface); box-shadow:var(--sombra); transition:border-color .15s; }
+.cabana:hover { border-color:var(--amber); }
+.cabana .visual { aspect-ratio:4/3; background:var(--amber-fraco); }
+.cabana .visual img { width:100%; height:100%; object-fit:cover; display:block; }
+.sem-foto { width:100%; height:100%; display:grid; place-items:center; }
+.sem-foto span { font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600;
+  letter-spacing:.11em; text-transform:uppercase; color:var(--muted); }
+.cabana .corpo { padding:13px 15px; display:flex; flex-direction:column; gap:3px; }
+.cabana .nome { font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:16px; }
+.cabana .preco { font-size:14px; font-variant-numeric:tabular-nums; }
+.cabana .preco span { color:var(--muted); font-size:12.5px; }
+.cabana .cta { margin-top:6px; color:var(--amber); font-size:12.5px; font-weight:600; }
+
 .nota { border-left:2px solid var(--amber); padding:2px 0 2px 18px;
   color:var(--muted); max-width:66ch; }
 .nota b { color:var(--ink); }
@@ -314,7 +330,59 @@ footer { margin-top:60px; padding-top:24px; border-top:1px solid var(--rule);
 
 <section>
   <div class="cabeca">
-    <span class="rotulo">2 · No fechamento</span>
+    <span class="rotulo">2 · As cabanas</span>
+    <h2>O que ele manda para o hóspede</h2>
+  </div>
+  <p class="intro">São estes os cinco anúncios que o atendente envia. Clique em
+  qualquer um: abre o Airbnb, com as datas livres e o botão de reservar. É o
+  mesmo link que chega no WhatsApp.</p>
+  <div class="catalogo">
+    <a class="cabana" href="https://airbnb.com.br/h/1992cabana1" target="_blank" rel="noopener">
+      <div class="visual"><div class="sem-foto"><span>foto em breve</span></div></div>
+      <div class="corpo">
+        <span class="nome">Cabana 1</span>
+        <span class="preco">R$ 150,00 <span>a diária</span></span>
+        <span class="cta">Ver fotos e reservar no Airbnb →</span>
+      </div>
+    </a>
+    <a class="cabana" href="https://airbnb.com.br/h/1992cabana2" target="_blank" rel="noopener">
+      <div class="visual"><div class="sem-foto"><span>foto em breve</span></div></div>
+      <div class="corpo">
+        <span class="nome">Cabana 2</span>
+        <span class="preco">R$ 150,00 <span>a diária</span></span>
+        <span class="cta">Ver fotos e reservar no Airbnb →</span>
+      </div>
+    </a>
+    <a class="cabana" href="https://airbnb.com.br/h/1992cabana3" target="_blank" rel="noopener">
+      <div class="visual"><div class="sem-foto"><span>foto em breve</span></div></div>
+      <div class="corpo">
+        <span class="nome">Cabana 3</span>
+        <span class="preco">R$ 150,00 <span>a diária</span></span>
+        <span class="cta">Ver fotos e reservar no Airbnb →</span>
+      </div>
+    </a>
+    <a class="cabana" href="https://airbnb.com.br/h/1992cabana4" target="_blank" rel="noopener">
+      <div class="visual"><div class="sem-foto"><span>foto em breve</span></div></div>
+      <div class="corpo">
+        <span class="nome">Cabana 4</span>
+        <span class="preco">R$ 150,00 <span>a diária</span></span>
+        <span class="cta">Ver fotos e reservar no Airbnb →</span>
+      </div>
+    </a>
+    <a class="cabana" href="https://airbnb.com.br/h/1992cabana5" target="_blank" rel="noopener">
+      <div class="visual"><div class="sem-foto"><span>foto em breve</span></div></div>
+      <div class="corpo">
+        <span class="nome">Cabana 5</span>
+        <span class="preco">R$ 150,00 <span>a diária</span></span>
+        <span class="cta">Ver fotos e reservar no Airbnb →</span>
+      </div>
+    </a></div>
+  <p class="nota"><b>As fotos ainda não estão aqui.</b> Os cartões acima mostram “foto em breve” de propósito — colocar uma imagem que não é a cabana do Adriano seria pior do que não ter nenhuma. Assim que as fotos entrarem na pasta, elas aparecem aqui automaticamente. Enquanto isso, o hóspede vê as fotos de verdade no próprio Airbnb, que é para onde o link leva.</p>
+</section>
+
+<section>
+  <div class="cabeca">
+    <span class="rotulo">3 · No fechamento</span>
     <h2>Quem demonstrou intenção de reservar</h2>
   </div>
   <p class="intro">Cada conversa acima com intenção real de reserva cai nesta
@@ -355,7 +423,7 @@ footer { margin-top:60px; padding-top:24px; border-top:1px solid var(--rule);
 
 <section>
   <div class="cabeca">
-    <span class="rotulo">3 · O painel completo</span>
+    <span class="rotulo">4 · O painel completo</span>
     <h2>As telas que a Camily e o Adriano usam</h2>
   </div>
   <div class="abas" role="tablist">
