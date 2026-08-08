@@ -119,6 +119,13 @@ section {{ margin-top:56px; display:flex; flex-direction:column; gap:18px; }}
 .msg.deles {{ align-self:flex-end; background:#005c4b; color:#e9edef; border-bottom-right-radius:2px; }}
 .msg.nossa {{ align-self:flex-start; background:#202c33; color:#e9edef; border-bottom-left-radius:2px; }}
 .msg a {{ color:#8fd6ff; }}
+.cartao-link {{ display:block; margin-top:8px; padding:10px 12px; border-radius:9px;
+  background:#111c22; border:1px solid #2a3942; text-decoration:none; }}
+.cartao-link:hover {{ border-color:#00a884; }}
+.cartao-link .ct {{ display:block; color:#e9edef; font-weight:600; font-size:13.5px; }}
+.cartao-link .cs {{ display:block; color:#8696a0; font-size:12px; margin-top:2px; }}
+.cartao-link .cb {{ display:inline-block; margin-top:7px; color:#00d09c;
+  font-size:12.5px; font-weight:600; }}
 .hora {{ display:block; font-size:10.5px; color:#8696a0; text-align:right; margin-top:3px;
   font-family:'IBM Plex Mono',monospace; }}
 .digitando {{ align-self:flex-start; background:#202c33; color:#8696a0;
@@ -379,24 +386,29 @@ const LINKS = {json.dumps(LINKS)};
 const DIARIA = 'R$ 150,00';
 const ESCALACAO = 'Vou passar sua mensagem para nossa equipe, que já retorna para você por aqui.';
 
-function link(n) {{ return '<a href="' + LINKS[n] + '" target="_blank" rel="noopener">' + LINKS[n] + '</a>'; }}
+function link(n) {{
+  return '<a class="cartao-link" href="' + LINKS[n] + '" target="_blank" rel="noopener">' +
+    '<span class="ct">Cabana ' + n + ' · Airbnb</span>' +
+    '<span class="cs">Fotos, datas livres e reserva · ' + DIARIA + ' a diária</span>' +
+    '<span class="cb">Ver e reservar →</span></a>';
+}}
 
 function responder(texto, intencao) {{
   if (intencao === 'escalacao') return {{ txt: ESCALACAO, link: false }};
   if (intencao === 'preco') return {{ txt:
     'Oi! A diária das cabanas é ' + DIARIA + '.\\n\\n' +
-    'Você vê as fotos, as datas livres e reserva direto por aqui: ' + link('1'), link: true }};
+    'É só abrir aqui:' + link('1'), link: true }};
   if (intencao === 'disponibilidade') return {{ txt:
     'Os dias de semana costumam ter mais disponibilidade que os fins de semana.\\n\\n' +
     'Não consigo confirmar uma data específica por aqui — a disponibilidade real ' +
-    'aparece no anúncio, e é lá que você reserva: ' + link('1'), link: true }};
+    'aparece no anúncio, e é lá que você reserva:' + link('1'), link: true }};
   if (intencao === 'reserva') return {{ txt:
     'Que bom! A reserva é feita direto no Airbnb, pelo link da cabana.\\n\\n' +
-    'É só escolher as datas por lá: ' + link('1'), link: true }};
+    'É só escolher as datas por lá:' + link('1'), link: true }};
   if (intencao === 'cabanas') return {{ txt:
     'São 5 cabanas, todas a ' + DIARIA + ' a diária.\\n\\n' +
     'Cada uma tem fotos e detalhes no anúncio:\\n' +
-    [1,2,3,4,5].map(n => 'Cabana ' + n + ': ' + link(String(n))).join('\\n'), link: true }};
+    [1,2,3,4,5].map(n => link(String(n))).join(''), link: true }};
   return {{ txt:
     'Oi! 😊 Posso te ajudar com valores, disponibilidade e reserva das cabanas.\\n\\n' +
     'O que você gostaria de saber?', link: false }};
