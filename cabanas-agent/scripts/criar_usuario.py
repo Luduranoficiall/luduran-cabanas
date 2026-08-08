@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Cria ou atualiza um usuário do painel no Firestore.
 
-A senha é pedida no terminal, sem eco, e nunca vai para o histórico do shell
-nem para variável de ambiente. No banco fica só o hash scrypt.
+A senha é pedida no terminal sem eco, ou lida de SENHA_PAINEL quando os
+comandos são colados em bloco e o prompt interativo não sobrevive. Em nenhum
+dos dois casos ela vai para o histórico do shell. No banco fica só o hash
+scrypt.
 
 Uso:
     python cabanas-agent/scripts/criar_usuario.py lucas@luduran.com --papel admin
@@ -24,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import getpass
+import os
 import sys
 from pathlib import Path
 
@@ -36,6 +39,27 @@ TAMANHO_MINIMO = 12
 
 
 def pedir_senha() -> str:
+    """A senha vem de SENHA_PAINEL, ou é perguntada.
+
+    A variável existe porque a pergunta interativa não sobrevive a um bloco de
+    comandos colado de uma vez: a linha seguinte do bloco vira a resposta, ou o
+    terminal engole o prompt e o script morre com KeyboardInterrupt. Colar um
+    bloco é exatamente como se instala isso na prática.
+
+        read -s -p "Senha: " SENHA_PAINEL; echo; export SENHA_PAINEL
+
+    Assim a senha também não fica no histórico do shell, o que aconteceria se
+    ela viesse como argumento de linha de comando.
+    """
+    do_ambiente = os.environ.get("SENHA_PAINEL")
+    if do_ambiente:
+        if len(do_ambiente) < TAMANHO_MINIMO:
+            raise SystemExit(
+                f"SENHA_PAINEL tem {len(do_ambiente)} caracteres; "
+                f"o mínimo é {TAMANHO_MINIMO}."
+            )
+        return do_ambiente
+
     senha = getpass.getpass("Senha: ")
     if len(senha) < TAMANHO_MINIMO:
         raise SystemExit(f"Senha muito curta (mínimo {TAMANHO_MINIMO} caracteres).")

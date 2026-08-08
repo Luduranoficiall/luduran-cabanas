@@ -402,3 +402,46 @@ def test_painel_fica_fora_de_buscador(cliente):
     entrar(cliente, "lucas@luduran.com", SENHA_LUCAS)
     r = cliente.get("/painel/")
     assert "noindex" in r.text
+
+
+# --- criação de usuário ---------------------------------------------------
+
+
+def _criar_usuario_mod():
+    import importlib.util
+    from pathlib import Path
+
+    caminho = Path(__file__).resolve().parent.parent / "scripts" / "criar_usuario.py"
+    spec = importlib.util.spec_from_file_location("criar_usuario", caminho)
+    modulo = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(modulo)
+    return modulo
+
+
+def test_senha_pode_vir_do_ambiente(monkeypatch):
+    """Colar um bloco de comandos mata o prompt interativo.
+
+    A pergunta do getpass consome a linha seguinte do bloco colado, ou morre
+    com KeyboardInterrupt — foi o que travou a instalação em produção. Com a
+    variável, o mesmo bloco roda inteiro sem parar.
+    """
+    mod = _criar_usuario_mod()
+    monkeypatch.setenv("SENHA_PAINEL", "uma-senha-bem-longa")
+    assert mod.pedir_senha() == "uma-senha-bem-longa"
+
+
+def test_senha_curta_no_ambiente_e_recusada(monkeypatch):
+    mod = _criar_usuario_mod()
+    monkeypatch.setenv("SENHA_PAINEL", "curta")
+    with pytest.raises(SystemExit) as e:
+        mod.pedir_senha()
+    assert "mínimo" in str(e.value)
+
+
+def test_sem_variavel_ainda_pergunta(monkeypatch):
+    """Quem roda à mão continua sendo perguntado, com confirmação."""
+    mod = _criar_usuario_mod()
+    monkeypatch.delenv("SENHA_PAINEL", raising=False)
+    respostas = iter(["uma-senha-bem-longa", "uma-senha-bem-longa"])
+    monkeypatch.setattr(mod.getpass, "getpass", lambda _: next(respostas))
+    assert mod.pedir_senha() == "uma-senha-bem-longa"
