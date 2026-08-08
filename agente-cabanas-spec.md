@@ -26,10 +26,10 @@ Links das cabanas:
 - cabana4 → https://airbnb.com.br/h/1992cabana4
 - cabana5 → https://airbnb.com.br/h/1992cabana5
 
-> ✅ **Resolvido:** a cabana 3 existe e vai entrar. O anúncio dela ainda não foi
-> criado no Airbnb, então o link acima é o esperado, mas ainda não vale.
+> ✅ **Fechado.** A Camile mandou o link da cabana 3 depois de criar o anúncio,
+> e os cinco links acima estão confirmados por ela.
 >
-> **No ar hoje:** `CABANAS=1,2,4,5` — quatro cabanas.
+> **No ar:** `CABANAS=1,2,3,4,5` — as cinco.
 >
 > **Quando o link chegar**, ativar por configuração, sem deploy de código:
 >
@@ -218,9 +218,11 @@ ligar uma cabana nova exigiria mexer em código.
 
 ## 7. Checklist antes de ativar
 
-- [x] Confirmar com a Camile se cabana3 existe — existe; falta o link do Airbnb
-- [ ] Receber o link da cabana 3 e ativar via `CABANAS` + `CABANA_URLS`
-- [ ] Pedir fotos das cabanas — pasta `assets/cabanas/` criada, aguardando
+- [x] Confirmar com a Camile se cabana3 existe — existe, e o anúncio foi criado
+- [x] Receber o link da cabana 3 — recebido; as cinco estão em `LINKS_CONFIRMADOS`
+- [ ] Fotos das cabanas — a Camile mandou e etiquetou (1, 3, 3, 4, 5) pelo
+      WhatsApp; falta subir os arquivos para `assets/cabanas/`. Não bloqueia o
+      lançamento: o cartão leva ao anúncio, onde as fotos já estão.
 - [x] Testar os 5 fluxos da seção 3 em ambiente de teste — 45 testes, `pytest`
 - [ ] Validar que o agente nunca confirma data específica — exige teste com o
       modelo real; a regra está no prompt, mas só staging comprova
