@@ -120,6 +120,13 @@ class Settings:
     comissao_percentual: float = field(
         default_factory=lambda: float(_env("COMISSAO_PERCENTUAL", "10"))
     )
+    # Demonstração aberta em "/", sem senha. O cliente precisa ver o sistema
+    # inteiro antes de aprovar, e exigir login para isso trava a aprovação.
+    # Ela não toca no banco: as conversas são inventadas e nada é gravado.
+    # Depois do lançamento, DEMO_PUBLICA=0 desliga e "/" passa a levar ao painel.
+    demo_publica: bool = field(
+        default_factory=lambda: _env("DEMO_PUBLICA", "1") not in ("0", "false", "")
+    )
     # Cookie de sessão só sai por HTTPS. Desligar apenas em teste local.
     cookie_seguro: bool = field(
         default_factory=lambda: _env("COOKIE_SEGURO", "1") not in ("0", "false", "no")

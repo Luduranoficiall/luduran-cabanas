@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 from .config import settings
 from .gemini_client import GeminiClient
@@ -82,6 +84,30 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Agente Cabanas", lifespan=lifespan)
 app.include_router(webhook_router)
 app.include_router(painel_router)
+
+
+DEMO = Path(__file__).parent / "static" / "demo.html"
+
+
+@app.get("/", response_class=HTMLResponse)
+async def raiz() -> HTMLResponse:
+    """Demonstração aberta, sem senha.
+
+    O cliente aprova o sistema antes de existir credencial da Meta, e pedir
+    login para isso emperra a aprovação. A página é autossuficiente e usa
+    conversas inventadas — não lê nem grava nada no Firestore, então não há
+    dado pessoal exposto.
+    """
+    if not settings.demo_publica:
+        return RedirectResponse("/painel/", status_code=303)
+    return HTMLResponse(DEMO.read_text(encoding="utf-8"))
+
+
+@app.get("/demo", response_class=HTMLResponse)
+async def demo() -> HTMLResponse:
+    """Mesmo conteúdo de "/", num endereço que continua valendo depois que a
+    raiz passar a levar ao painel."""
+    return HTMLResponse(DEMO.read_text(encoding="utf-8"))
 
 
 @app.get("/health")

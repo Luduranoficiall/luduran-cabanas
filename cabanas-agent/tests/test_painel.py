@@ -445,3 +445,46 @@ def test_sem_variavel_ainda_pergunta(monkeypatch):
     respostas = iter(["uma-senha-bem-longa", "uma-senha-bem-longa"])
     monkeypatch.setattr(mod.getpass, "getpass", lambda _: next(respostas))
     assert mod.pedir_senha() == "uma-senha-bem-longa"
+
+
+# --- demonstração aberta --------------------------------------------------
+
+
+def test_raiz_abre_a_demo_sem_login(cliente):
+    """O cliente precisa aprovar o sistema antes de existir credencial da Meta.
+
+    Exigir login para isso trava a aprovação — e é justamente o que ele pediu
+    para não ter. A página não lê nem grava nada, então não expõe telefone de
+    ninguém.
+    """
+    r = cliente.get("/", follow_redirects=False)
+    assert r.status_code == 200
+    assert "o atendente" in r.text.lower()
+    assert a.COOKIE_SESSAO not in r.cookies
+
+
+def test_demo_tem_endereco_proprio(cliente):
+    """/demo continua valendo depois que a raiz virar o painel."""
+    assert cliente.get("/demo").status_code == 200
+
+
+def test_painel_continua_exigindo_login_com_a_demo_aberta(cliente):
+    """Abrir a demo não pode afrouxar o painel, que guarda dado pessoal."""
+    assert cliente.get("/painel/", follow_redirects=False).status_code == 303
+    assert cliente.get("/painel/fechamento.csv", follow_redirects=False).status_code == 303
+
+
+def test_demo_pode_ser_desligada(cliente, monkeypatch):
+    """Depois do lançamento, a raiz volta a ser a porta do painel."""
+    import dataclasses
+
+    import app.main as main_mod
+
+    # Settings é congelado de propósito: configuração não muda em tempo de
+    # execução. Para o teste, troca-se o objeto inteiro.
+    monkeypatch.setattr(
+        main_mod, "settings", dataclasses.replace(main_mod.settings, demo_publica=False)
+    )
+    r = cliente.get("/", follow_redirects=False)
+    assert r.status_code == 303
+    assert r.headers["location"] == "/painel/"
